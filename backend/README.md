@@ -31,6 +31,13 @@ count, and hospital counts by state or territory. It returns `404` until a full
 ingestion has completed. Completion is validated against rows from the exact
 retrieval timestamp, so partial retries are never reported as complete.
 
+`GET /api/v1/hospitals/ingestion/latest` returns the latest ingestion run's
+started, succeeded, or failed state, progress counters, bounded failure detail,
+and the age of the most recent successful snapshot. It reports `is_stale` when
+no run has succeeded or the latest successful retrieval exceeds
+`HEALTHSCOPE_CMS_INGESTION_STALE_AFTER_HOURS` (default 26 hours), making the
+endpoint suitable for an external scheduler or monitor.
+
 ## Database and migrations
 
 PostgreSQL stores daily CMS hospital snapshots. The snapshot key combines the
@@ -68,9 +75,12 @@ The command uses one UTC retrieval timestamp for the entire snapshot, validates
 that CMS pagination remains consistent, and commits pages in bounded batches.
 Same-day reruns are idempotent and can safely resume a partially completed run.
 After the last page is persisted, the command records a completion marker only
-if the exact retrieval batch contains every expected row. It prints a JSON
-summary containing expected, fetched, and upserted counts; a source, validation,
-or database failure returns exit code 1 with a JSON error on standard error.
+if the exact retrieval batch contains every expected row. Every invocation also
+persists a durable run ID, lifecycle state, progress counts, and bounded failure
+detail. A terminated process remains in `started` state so monitoring can detect
+an abandoned run. The command prints a JSON summary containing the run ID plus
+expected, fetched, and upserted counts; a source, validation, or database failure
+returns exit code 1 with a JSON error on standard error.
 Configure page size with
 `HEALTHSCOPE_CMS_INGESTION_PAGE_SIZE` (1–100, default 100). Transient CMS
 timeouts and HTTP failures use bounded exponential retries; configure them with

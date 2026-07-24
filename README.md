@@ -24,9 +24,10 @@ healthcare KPIs, and exposing insights through APIs and interactive dashboards.
 Phase 1 is in progress. The repository includes a typed FastAPI service, a
 versioned health endpoint, a paginated live CMS Hospital General Information
 endpoint, versioned PostgreSQL migrations, an idempotent daily hospital snapshot
-store, verified completion metadata with state-level coverage APIs, an explicit
-full-dataset ingestion command, automated backend quality checks, and a
-PostgreSQL development container.
+store, verified completion metadata with state-level coverage APIs, durable
+ingestion run status and freshness monitoring, an explicit full-dataset
+ingestion command, automated backend quality checks, and a PostgreSQL
+development container.
 The first milestone targets three live healthcare data sources, REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md).

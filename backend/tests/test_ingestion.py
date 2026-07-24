@@ -9,7 +9,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from healthscope.clients.cms import CMSUpstreamError, CMSUpstreamTimeoutError
 from healthscope.database import Base
-from healthscope.models import HospitalSnapshot, HospitalSnapshotCompletion
+from healthscope.models import (
+    HospitalIngestionRun,
+    HospitalSnapshot,
+    HospitalSnapshotCompletion,
+)
 from healthscope.schemas.hospitals import Hospital, HospitalDataSource, HospitalPage
 from healthscope.services.ingestion import HospitalIngestionError, ingest_hospital_snapshots
 
@@ -113,6 +117,7 @@ def test_ingestion_pages_full_dataset_with_one_utc_timestamp() -> None:
     )
 
     assert result.expected_count == 3
+    assert result.run_id
     assert result.fetched_count == 3
     assert result.upserted_count == 3
     assert result.pages == 2
@@ -126,8 +131,17 @@ def test_ingestion_pages_full_dataset_with_one_utc_timestamp() -> None:
     assert {snapshot.retrieved_at for snapshot in snapshots} == {datetime(2026, 7, 19, 22)}
     with Session(engine) as session:
         completion = session.scalars(select(HospitalSnapshotCompletion)).one()
+        run = session.scalars(select(HospitalIngestionRun)).one()
     assert completion.record_count == 3
     assert completion.retrieved_at == datetime(2026, 7, 19, 22)
+    assert run.status == "succeeded"
+    assert run.expected_count == 3
+    assert run.fetched_count == 3
+    assert run.upserted_count == 3
+    assert run.pages == 2
+    assert run.request_attempts == 2
+    assert run.finished_at is not None
+    assert run.error_type is None
     engine.dispose()
 
 
@@ -150,7 +164,10 @@ def test_ingestion_accepts_an_empty_official_dataset() -> None:
     with Session(engine) as session:
         assert session.scalar(select(func.count()).select_from(HospitalSnapshot)) == 0
         completion = session.scalars(select(HospitalSnapshotCompletion)).one()
+        run = session.scalars(select(HospitalIngestionRun)).one()
     assert completion.record_count == 0
+    assert run.status == "succeeded"
+    assert run.expected_count == 0
     engine.dispose()
 
 
@@ -197,6 +214,11 @@ def test_ingestion_rejects_inconsistent_pagination(
 
     with Session(engine) as session:
         assert session.scalar(select(func.count()).select_from(HospitalSnapshotCompletion)) == 0
+        run = session.scalars(select(HospitalIngestionRun)).one()
+    assert run.status == "failed"
+    assert run.error_type == "HospitalIngestionError"
+    assert run.error_message is not None
+    assert message in run.error_message
     engine.dispose()
 
 
@@ -241,6 +263,11 @@ def test_ingestion_reraises_transient_failure_after_attempt_limit() -> None:
             )
         )
 
+    with Session(engine) as session:
+        run = session.scalars(select(HospitalIngestionRun)).one()
+    assert run.status == "failed"
+    assert run.request_attempts == 2
+    assert run.error_type == "CMSUpstreamTimeoutError"
     engine.dispose()
 
 

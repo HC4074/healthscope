@@ -12,6 +12,7 @@ from healthscope.config import Settings
 from healthscope.services.ingestion import HospitalIngestionError, HospitalIngestionResult
 
 RESULT = HospitalIngestionResult(
+    run_id="11111111-1111-1111-1111-111111111111",
     source_dataset_id="xubh-q36u",
     retrieved_at=datetime(2026, 7, 19, 22, tzinfo=UTC),
     expected_count=5432,
@@ -70,6 +71,7 @@ def test_ingestion_cli_reports_structured_success(capsys: pytest.CaptureFixture[
     payload = json.loads(capsys.readouterr().out)
     assert payload == {
         "status": "ok",
+        "run_id": "11111111-1111-1111-1111-111111111111",
         "source_dataset_id": "xubh-q36u",
         "retrieved_at": "2026-07-19T22:00:00+00:00",
         "expected_count": 5432,

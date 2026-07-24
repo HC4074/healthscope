@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     cms_ingestion_page_size: int = Field(default=100, ge=1, le=100)
     cms_ingestion_max_attempts: int = Field(default=3, ge=1, le=10)
     cms_ingestion_retry_delay_seconds: float = Field(default=1.0, ge=0, le=60)
+    cms_ingestion_stale_after_hours: int = Field(default=26, ge=1, le=168)
 
 
 @lru_cache

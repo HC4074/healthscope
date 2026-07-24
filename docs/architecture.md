@@ -20,7 +20,11 @@ application behavior, and storage can evolve independently.
    a failed run can be safely retried without coupling ETL to API startup. The
    command reuses one HTTP connection pool and retries transient CMS failures
    with bounded exponential backoff.
-6. Completion metadata is written only after the exact retrieval batch contains
+6. Every ingestion has a durable run ID and lifecycle record. Page counters are
+   committed with the corresponding snapshot rows, failures retain bounded
+   error detail, and completion plus succeeded status are committed atomically.
+   A latest-run API also reports freshness relative to the most recent success.
+7. Completion metadata is written only after the exact retrieval batch contains
    every CMS-reported record. Snapshot status reads revalidate that marker and
    aggregate state coverage from matching rows, preventing a partial same-day
    retry from being exposed as a complete snapshot.
@@ -34,6 +38,6 @@ provided through environment variables rather than committed configuration.
 
 ## Next boundary
 
-The next increment should add operational scheduling and run observability for
-the ingestion command, including durable failure status and freshness
-monitoring. Scheduling remains separate from API startup.
+The next increment should add external daily scheduling and alerting around the
+one-shot command and its run-status endpoint. Scheduling remains separate from
+API startup.

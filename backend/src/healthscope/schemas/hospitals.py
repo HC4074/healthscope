@@ -1,6 +1,7 @@
 """Public hospital response models."""
 
 from datetime import date, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,3 +70,35 @@ class HospitalSnapshotStatus(BaseModel):
     record_count: int = Field(ge=0)
     state_count: int = Field(ge=0)
     state_coverage: list[HospitalStateCoverage]
+
+
+class HospitalIngestionRunState(StrEnum):
+    """Lifecycle states persisted for a hospital ingestion run."""
+
+    STARTED = "started"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class HospitalIngestionStatus(BaseModel):
+    """Latest ingestion lifecycle plus freshness of the last successful snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    source_dataset_id: str
+    status: HospitalIngestionRunState
+    retrieved_at: datetime
+    started_at: datetime
+    finished_at: datetime | None
+    expected_count: int | None = Field(default=None, ge=0)
+    fetched_count: int = Field(ge=0)
+    upserted_count: int = Field(ge=0)
+    pages: int = Field(ge=0)
+    request_attempts: int = Field(ge=0)
+    error_type: str | None
+    error_message: str | None
+    latest_successful_retrieved_at: datetime | None
+    freshness_seconds: int | None = Field(default=None, ge=0)
+    stale_after_seconds: int = Field(ge=1)
+    is_stale: bool

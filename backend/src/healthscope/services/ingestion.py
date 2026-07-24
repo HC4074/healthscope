@@ -1,10 +1,12 @@
 """Orchestration for reproducible CMS hospital snapshot ingestion."""
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from healthscope.clients.cms import CMSUpstreamError, CMSUpstreamTimeoutError
@@ -12,7 +14,12 @@ from healthscope.repositories.hospitals import (
     mark_hospital_snapshot_complete,
     upsert_hospital_snapshots,
 )
-from healthscope.schemas.hospitals import HospitalPage
+from healthscope.repositories.ingestion_runs import (
+    finish_hospital_ingestion_run,
+    start_hospital_ingestion_run,
+    update_hospital_ingestion_run,
+)
+from healthscope.schemas.hospitals import HospitalIngestionRunState, HospitalPage
 
 
 class HospitalPageClient(Protocol):
@@ -30,6 +37,7 @@ class HospitalIngestionError(Exception):
 class HospitalIngestionResult:
     """Counts and provenance reported by a completed ingestion run."""
 
+    run_id: str
     source_dataset_id: str
     retrieved_at: datetime
     expected_count: int
@@ -46,23 +54,25 @@ async def _fetch_page_with_retries(
     offset: int,
     attempts_remaining: int,
     retry_delay_seconds: float,
-) -> tuple[HospitalPage, int]:
+    on_attempt: Callable[[], None],
+) -> HospitalPage:
     """Fetch one CMS page with bounded exponential retries."""
 
+    on_attempt()
     try:
-        return await client.fetch_hospitals(limit=limit, offset=offset), 1
+        return await client.fetch_hospitals(limit=limit, offset=offset)
     except (CMSUpstreamError, CMSUpstreamTimeoutError):
         if attempts_remaining == 1:
             raise
         await asyncio.sleep(retry_delay_seconds)
-        page, attempts = await _fetch_page_with_retries(
+        return await _fetch_page_with_retries(
             client,
             limit=limit,
             offset=offset,
             attempts_remaining=attempts_remaining - 1,
             retry_delay_seconds=retry_delay_seconds * 2,
+            on_attempt=on_attempt,
         )
-        return page, attempts + 1
 
 
 async def ingest_hospital_snapshots(
@@ -98,62 +108,111 @@ async def ingest_hospital_snapshots(
     request_attempts = 0
     seen_facility_ids: set[str] = set()
 
-    while expected_count is None or fetched_count < expected_count:
-        page, page_attempts = await _fetch_page_with_retries(
-            client,
-            limit=page_size,
-            offset=fetched_count,
-            attempts_remaining=max_attempts,
-            retry_delay_seconds=retry_delay_seconds,
-        )
-        request_attempts += page_attempts
-        pages += 1
+    def count_request_attempt() -> None:
+        nonlocal request_attempts
+        request_attempts += 1
 
-        if expected_count is None:
-            expected_count = page.total
-        elif page.total != expected_count:
-            raise HospitalIngestionError(
-                f"CMS record count changed during ingestion: {expected_count} to {page.total}"
-            )
-
-        remaining_count = expected_count - fetched_count
-        if len(page.items) > remaining_count:
-            raise HospitalIngestionError(
-                "CMS returned more hospital records than its reported total"
-            )
-        if not page.items:
-            if remaining_count:
-                raise HospitalIngestionError(
-                    f"CMS returned an empty page at offset {fetched_count} "
-                    f"before the reported total of {expected_count}"
-                )
-            break
-
-        facility_ids = {hospital.facility_id for hospital in page.items}
-        if len(facility_ids) != len(page.items) or facility_ids & seen_facility_ids:
-            raise HospitalIngestionError("CMS returned duplicate facility IDs during ingestion")
-
-        with session_factory.begin() as session:
-            upserted_count += upsert_hospital_snapshots(
-                session,
-                page.items,
-                source_dataset_id=source_dataset_id,
-                retrieved_at=snapshot_retrieved_at,
-            )
-
-        seen_facility_ids.update(facility_ids)
-        fetched_count += len(page.items)
-
-    assert expected_count is not None
     with session_factory.begin() as session:
-        mark_hospital_snapshot_complete(
+        run_id = start_hospital_ingestion_run(
             session,
             source_dataset_id=source_dataset_id,
             retrieved_at=snapshot_retrieved_at,
-            record_count=expected_count,
-        )
+        ).run_id
+
+    try:
+        while expected_count is None or fetched_count < expected_count:
+            page = await _fetch_page_with_retries(
+                client,
+                limit=page_size,
+                offset=fetched_count,
+                attempts_remaining=max_attempts,
+                retry_delay_seconds=retry_delay_seconds,
+                on_attempt=count_request_attempt,
+            )
+            pages += 1
+
+            if expected_count is None:
+                expected_count = page.total
+            elif page.total != expected_count:
+                raise HospitalIngestionError(
+                    f"CMS record count changed during ingestion: {expected_count} to {page.total}"
+                )
+
+            remaining_count = expected_count - fetched_count
+            if len(page.items) > remaining_count:
+                raise HospitalIngestionError(
+                    "CMS returned more hospital records than its reported total"
+                )
+            if not page.items:
+                if remaining_count:
+                    raise HospitalIngestionError(
+                        f"CMS returned an empty page at offset {fetched_count} "
+                        f"before the reported total of {expected_count}"
+                    )
+                break
+
+            facility_ids = {hospital.facility_id for hospital in page.items}
+            if len(facility_ids) != len(page.items) or facility_ids & seen_facility_ids:
+                raise HospitalIngestionError("CMS returned duplicate facility IDs during ingestion")
+
+            fetched_count += len(page.items)
+            seen_facility_ids.update(facility_ids)
+            with session_factory.begin() as session:
+                page_upserted_count = upsert_hospital_snapshots(
+                    session,
+                    page.items,
+                    source_dataset_id=source_dataset_id,
+                    retrieved_at=snapshot_retrieved_at,
+                )
+                update_hospital_ingestion_run(
+                    session,
+                    run_id=run_id,
+                    expected_count=expected_count,
+                    fetched_count=fetched_count,
+                    upserted_count=upserted_count + page_upserted_count,
+                    pages=pages,
+                    request_attempts=request_attempts,
+                )
+            upserted_count += page_upserted_count
+
+        assert expected_count is not None
+        with session_factory.begin() as session:
+            mark_hospital_snapshot_complete(
+                session,
+                source_dataset_id=source_dataset_id,
+                retrieved_at=snapshot_retrieved_at,
+                record_count=expected_count,
+            )
+            finish_hospital_ingestion_run(
+                session,
+                run_id=run_id,
+                status=HospitalIngestionRunState.SUCCEEDED,
+                expected_count=expected_count,
+                fetched_count=fetched_count,
+                upserted_count=upserted_count,
+                pages=pages,
+                request_attempts=request_attempts,
+            )
+    except Exception as exc:
+        try:
+            with session_factory.begin() as session:
+                finish_hospital_ingestion_run(
+                    session,
+                    run_id=run_id,
+                    status=HospitalIngestionRunState.FAILED,
+                    expected_count=expected_count,
+                    fetched_count=fetched_count,
+                    upserted_count=upserted_count,
+                    pages=pages,
+                    request_attempts=request_attempts,
+                    error=exc,
+                )
+        except SQLAlchemyError:
+            pass
+        raise
 
     return HospitalIngestionResult(
+        run_id=run_id,
         source_dataset_id=source_dataset_id,
         retrieved_at=snapshot_retrieved_at,
         expected_count=expected_count,

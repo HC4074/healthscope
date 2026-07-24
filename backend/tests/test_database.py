@@ -255,6 +255,7 @@ def test_migration_upgrades_and_downgrades_empty_database(tmp_path: Path) -> Non
 
     assert "hospital_snapshots" in inspector.get_table_names()
     assert "hospital_snapshot_completions" in inspector.get_table_names()
+    assert "hospital_ingestion_runs" in inspector.get_table_names()
     assert set(inspector.get_pk_constraint("hospital_snapshots")["constrained_columns"]) == {
         "source_dataset_id",
         "snapshot_date",
@@ -270,8 +271,20 @@ def test_migration_upgrades_and_downgrades_empty_database(tmp_path: Path) -> Non
         constraint["name"]
         for constraint in inspector.get_check_constraints("hospital_snapshot_completions")
     } == {"ck_hospital_snapshot_completions_record_count_nonnegative"}
+    assert {
+        constraint["name"]
+        for constraint in inspector.get_check_constraints("hospital_ingestion_runs")
+    } == {
+        "ck_hospital_ingestion_runs_expected_count_nonnegative",
+        "ck_hospital_ingestion_runs_fetched_count_nonnegative",
+        "ck_hospital_ingestion_runs_pages_nonnegative",
+        "ck_hospital_ingestion_runs_request_attempts_nonnegative",
+        "ck_hospital_ingestion_runs_status_valid",
+        "ck_hospital_ingestion_runs_upserted_count_nonnegative",
+    }
 
     command.downgrade(config, "base")
     assert "hospital_snapshots" not in inspect(engine).get_table_names()
     assert "hospital_snapshot_completions" not in inspect(engine).get_table_names()
+    assert "hospital_ingestion_runs" not in inspect(engine).get_table_names()
     engine.dispose()
