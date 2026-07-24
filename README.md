@@ -1,6 +1,6 @@
-# HealthScope AI
+# HealthScope
 
-HealthScope AI is a production-oriented healthcare intelligence platform for
+HealthScope is a production-oriented healthcare intelligence platform for
 ingesting live public datasets, preserving historical snapshots, calculating
 healthcare KPIs, and exposing insights through APIs and interactive dashboards.
 

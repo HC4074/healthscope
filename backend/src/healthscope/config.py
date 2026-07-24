@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "HealthScope AI"
+    app_name: str = "HealthScope"
     environment: str = Field(default="development", pattern=r"^[a-z][a-z0-9_-]*$")
     api_prefix: str = "/api/v1"
     debug: bool = False

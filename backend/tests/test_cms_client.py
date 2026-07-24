@@ -51,7 +51,7 @@ def test_fetch_hospitals_validates_and_maps_live_cms_fields() -> None:
         assert request.url.path == "/api/1/datastore/query/xubh-q36u/0"
         assert request.url.params["limit"] == "3"
         assert request.url.params["offset"] == "10"
-        assert request.headers["user-agent"] == "HealthScope-AI/0.1"
+        assert request.headers["user-agent"] == "HealthScope/0.1"
         return httpx.Response(
             200,
             json={

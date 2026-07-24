@@ -109,7 +109,7 @@ class CMSClient:
         return httpx.AsyncClient(
             timeout=self._timeout_seconds,
             transport=self._transport,
-            headers={"User-Agent": "HealthScope-AI/0.1"},
+            headers={"User-Agent": "HealthScope/0.1"},
         )
 
     async def __aenter__(self) -> "CMSClient":

@@ -1,6 +1,6 @@
 # HealthScope API
 
-The FastAPI service that powers HealthScope AI.
+The FastAPI service that powers HealthScope.
 
 ## Local development
 

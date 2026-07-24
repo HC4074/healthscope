@@ -1,6 +1,6 @@
-# HealthScope AI architecture
+# HealthScope architecture
 
-HealthScope AI currently uses a small layered backend so public-data contracts,
+HealthScope currently uses a small layered backend so public-data contracts,
 application behavior, and storage can evolve independently.
 
 ## Backend flow

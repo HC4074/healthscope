@@ -1,4 +1,4 @@
-"""Alembic migration environment for HealthScope AI."""
+"""Alembic migration environment for HealthScope."""
 
 from logging.config import fileConfig
 

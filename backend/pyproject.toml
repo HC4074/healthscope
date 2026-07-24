@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "healthscope-api"
 version = "0.1.0"
-description = "Backend API for the HealthScope AI healthcare intelligence platform"
+description = "Backend API for the HealthScope healthcare intelligence platform"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
