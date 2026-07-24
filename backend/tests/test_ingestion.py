@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from healthscope.clients.cms import CMSUpstreamError, CMSUpstreamTimeoutError
 from healthscope.database import Base
-from healthscope.models import HospitalSnapshot
+from healthscope.models import HospitalSnapshot, HospitalSnapshotCompletion
 from healthscope.schemas.hospitals import Hospital, HospitalDataSource, HospitalPage
 from healthscope.services.ingestion import HospitalIngestionError, ingest_hospital_snapshots
 
@@ -124,6 +124,10 @@ def test_ingestion_pages_full_dataset_with_one_utc_timestamp() -> None:
     assert len(snapshots) == 3
     assert {snapshot.snapshot_date.isoformat() for snapshot in snapshots} == {"2026-07-19"}
     assert {snapshot.retrieved_at for snapshot in snapshots} == {datetime(2026, 7, 19, 22)}
+    with Session(engine) as session:
+        completion = session.scalars(select(HospitalSnapshotCompletion)).one()
+    assert completion.record_count == 3
+    assert completion.retrieved_at == datetime(2026, 7, 19, 22)
     engine.dispose()
 
 
@@ -145,6 +149,8 @@ def test_ingestion_accepts_an_empty_official_dataset() -> None:
     assert result.request_attempts == 1
     with Session(engine) as session:
         assert session.scalar(select(func.count()).select_from(HospitalSnapshot)) == 0
+        completion = session.scalars(select(HospitalSnapshotCompletion)).one()
+    assert completion.record_count == 0
     engine.dispose()
 
 
@@ -189,6 +195,8 @@ def test_ingestion_rejects_inconsistent_pagination(
             )
         )
 
+    with Session(engine) as session:
+        assert session.scalar(select(func.count()).select_from(HospitalSnapshotCompletion)) == 0
     engine.dispose()
 
 

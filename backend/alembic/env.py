@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from healthscope.config import get_settings
 from healthscope.database import Base
-from healthscope.models import HospitalSnapshot  # noqa: F401
+from healthscope.models import HospitalSnapshot, HospitalSnapshotCompletion  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

@@ -1,6 +1,6 @@
 """Public hospital response models."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,3 +46,26 @@ class HospitalPage(BaseModel):
     limit: int = Field(ge=1, le=100)
     offset: int = Field(ge=0)
     source: HospitalDataSource
+
+
+class HospitalStateCoverage(BaseModel):
+    """Hospital count for one state or territory in a completed snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    state: str = Field(pattern=r"^[A-Z]{2}$")
+    hospital_count: int = Field(ge=0)
+
+
+class HospitalSnapshotStatus(BaseModel):
+    """Metadata and geographic coverage for a completed hospital snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_dataset_id: str
+    snapshot_date: date
+    retrieved_at: datetime
+    completed_at: datetime
+    record_count: int = Field(ge=0)
+    state_count: int = Field(ge=0)
+    state_coverage: list[HospitalStateCoverage]

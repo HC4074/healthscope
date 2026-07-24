@@ -57,3 +57,22 @@ class HospitalSnapshot(Base):
             retrieved_at=retrieved_at_utc,
             **hospital.model_dump(),
         )
+
+
+class HospitalSnapshotCompletion(Base):
+    """Completion marker for one fully validated daily CMS snapshot."""
+
+    __tablename__ = "hospital_snapshot_completions"
+    __table_args__ = (
+        CheckConstraint("record_count >= 0", name="record_count_nonnegative"),
+        Index(
+            "ix_hospital_snapshot_completions_retrieved_at",
+            "retrieved_at",
+        ),
+    )
+
+    source_dataset_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    snapshot_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    record_count: Mapped[int] = mapped_column(Integer, nullable=False)

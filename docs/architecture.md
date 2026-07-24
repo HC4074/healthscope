@@ -20,6 +20,10 @@ application behavior, and storage can evolve independently.
    a failed run can be safely retried without coupling ETL to API startup. The
    command reuses one HTTP connection pool and retries transient CMS failures
    with bounded exponential backoff.
+6. Completion metadata is written only after the exact retrieval batch contains
+   every CMS-reported record. Snapshot status reads revalidate that marker and
+   aggregate state coverage from matching rows, preventing a partial same-day
+   retry from being exposed as a complete snapshot.
 
 ## Current deployment boundary
 
@@ -30,7 +34,6 @@ provided through environment variables rather than committed configuration.
 
 ## Next boundary
 
-The next increment should expose stored hospital snapshot status and history
-through typed read APIs, including latest snapshot date and basic state-level
-coverage counts. Scheduling remains separate from API startup and can be added
-after the ingestion command has production runtime monitoring.
+The next increment should add operational scheduling and run observability for
+the ingestion command, including durable failure status and freshness
+monitoring. Scheduling remains separate from API startup.

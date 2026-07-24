@@ -4,16 +4,43 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from healthscope.api.dependencies import SettingsDependency
 from healthscope.clients.cms import (
     CMSClientDependency,
     CMSClientError,
     CMSUpstreamTimeoutError,
 )
-from healthscope.schemas.hospitals import HospitalPage
+from healthscope.database import SessionDependency
+from healthscope.repositories.hospitals import get_latest_complete_hospital_snapshot
+from healthscope.schemas.hospitals import HospitalPage, HospitalSnapshotStatus
 
 router = APIRouter(prefix="/hospitals", tags=["hospitals"])
 PageLimit = Annotated[int, Query(ge=1, le=100)]
 PageOffset = Annotated[int, Query(ge=0)]
+
+
+@router.get(
+    "/snapshots/latest",
+    response_model=HospitalSnapshotStatus,
+    status_code=status.HTTP_200_OK,
+    summary="Get the latest complete hospital snapshot",
+)
+def latest_hospital_snapshot(
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> HospitalSnapshotStatus:
+    """Return metadata and state coverage for the newest complete CMS snapshot."""
+
+    snapshot = get_latest_complete_hospital_snapshot(
+        session,
+        source_dataset_id=settings.cms_hospital_dataset_id,
+    )
+    if snapshot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No complete CMS hospital snapshot is available.",
+        )
+    return snapshot
 
 
 @router.get(

@@ -8,7 +8,10 @@ from typing import Protocol
 from sqlalchemy.orm import Session, sessionmaker
 
 from healthscope.clients.cms import CMSUpstreamError, CMSUpstreamTimeoutError
-from healthscope.repositories.hospitals import upsert_hospital_snapshots
+from healthscope.repositories.hospitals import (
+    mark_hospital_snapshot_complete,
+    upsert_hospital_snapshots,
+)
 from healthscope.schemas.hospitals import HospitalPage
 
 
@@ -140,6 +143,15 @@ async def ingest_hospital_snapshots(
 
         seen_facility_ids.update(facility_ids)
         fetched_count += len(page.items)
+
+    assert expected_count is not None
+    with session_factory.begin() as session:
+        mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id=source_dataset_id,
+            retrieved_at=snapshot_retrieved_at,
+            record_count=expected_count,
+        )
 
     return HospitalIngestionResult(
         source_dataset_id=source_dataset_id,

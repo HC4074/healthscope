@@ -20,7 +20,11 @@ from healthscope.database import (
     get_session_factory,
 )
 from healthscope.models import HospitalSnapshot
-from healthscope.repositories.hospitals import _upsert_statement, upsert_hospital_snapshots
+from healthscope.repositories.hospitals import (
+    _upsert_statement,
+    mark_hospital_snapshot_complete,
+    upsert_hospital_snapshots,
+)
 from healthscope.schemas.hospitals import Hospital
 
 RETRIEVED_AT = datetime(2026, 7, 19, 12, 30, tzinfo=UTC)
@@ -103,6 +107,65 @@ def test_snapshot_upsert_accepts_empty_batch_and_rejects_duplicates() -> None:
                 source_dataset_id="xubh-q36u",
                 retrieved_at=RETRIEVED_AT,
             )
+    engine.dispose()
+
+
+def test_snapshot_completion_requires_exact_retrieval_batch() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session, session.begin():
+        upsert_hospital_snapshots(
+            session,
+            [official_cms_hospital()],
+            source_dataset_id="xubh-q36u",
+            retrieved_at=RETRIEVED_AT,
+        )
+        completion = mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id="xubh-q36u",
+            retrieved_at=RETRIEVED_AT,
+            record_count=1,
+        )
+        assert completion.record_count == 1
+
+    with (
+        Session(engine) as session,
+        pytest.raises(ValueError, match="expected 2 rows but found 1"),
+    ):
+        mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id="xubh-q36u",
+            retrieved_at=RETRIEVED_AT,
+            record_count=2,
+        )
+    engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("source_dataset_id", "retrieved_at", "record_count", "message"),
+    [
+        ("xubh-q36u", datetime(2026, 7, 19), 0, "include a timezone"),
+        ("", RETRIEVED_AT, 0, "1 to 32 characters"),
+        ("xubh-q36u", RETRIEVED_AT, -1, "cannot be negative"),
+    ],
+)
+def test_snapshot_completion_rejects_invalid_identity(
+    source_dataset_id: str,
+    retrieved_at: datetime,
+    record_count: int,
+    message: str,
+) -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session, pytest.raises(ValueError, match=message):
+        mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id=source_dataset_id,
+            retrieved_at=retrieved_at,
+            record_count=record_count,
+        )
     engine.dispose()
 
 
@@ -191,6 +254,7 @@ def test_migration_upgrades_and_downgrades_empty_database(tmp_path: Path) -> Non
     inspector = inspect(engine)
 
     assert "hospital_snapshots" in inspector.get_table_names()
+    assert "hospital_snapshot_completions" in inspector.get_table_names()
     assert set(inspector.get_pk_constraint("hospital_snapshots")["constrained_columns"]) == {
         "source_dataset_id",
         "snapshot_date",
@@ -202,7 +266,12 @@ def test_migration_upgrades_and_downgrades_empty_database(tmp_path: Path) -> Non
         "ck_hospital_snapshots_overall_rating_range",
         "ck_hospital_snapshots_state_length",
     }
+    assert {
+        constraint["name"]
+        for constraint in inspector.get_check_constraints("hospital_snapshot_completions")
+    } == {"ck_hospital_snapshot_completions_record_count_nonnegative"}
 
     command.downgrade(config, "base")
     assert "hospital_snapshots" not in inspect(engine).get_table_names()
+    assert "hospital_snapshot_completions" not in inspect(engine).get_table_names()
     engine.dispose()
