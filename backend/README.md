@@ -38,6 +38,13 @@ no run has succeeded or the latest successful retrieval exceeds
 `HEALTHSCOPE_CMS_INGESTION_STALE_AFTER_HOURS` (default 26 hours), making the
 endpoint suitable for an external scheduler or monitor.
 
+`GET /api/v1/hospitals/ingestion/health` is the monitor-ready counterpart. It
+returns `200` while the latest complete snapshot is fresh, including while a new
+refresh is in progress. It returns `503` with a machine-readable reason when no
+run exists, the latest run failed, or the last complete snapshot is stale.
+External uptime monitors can alert on the HTTP status without parsing freshness
+fields.
+
 ## Database and migrations
 
 PostgreSQL stores daily CMS hospital snapshots. The snapshot key combines the

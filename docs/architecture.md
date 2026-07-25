@@ -23,7 +23,10 @@ application behavior, and storage can evolve independently.
 6. Every ingestion has a durable run ID and lifecycle record. Page counters are
    committed with the corresponding snapshot rows, failures retain bounded
    error detail, and completion plus succeeded status are committed atomically.
-   A latest-run API also reports freshness relative to the most recent success.
+   A latest-run API also reports freshness relative to the most recent success,
+   while a monitor-ready health endpoint maps failed or stale ingestion to HTTP
+   503. An active refresh stays healthy when the previous snapshot is still
+   fresh, avoiding false-positive alerts during scheduled runs.
 7. Completion metadata is written only after the exact retrieval batch contains
    every CMS-reported record. Snapshot status reads revalidate that marker and
    aggregate state coverage from matching rows, preventing a partial same-day
@@ -38,6 +41,7 @@ provided through environment variables rather than committed configuration.
 
 ## Next boundary
 
-The next increment should add external daily scheduling and alerting around the
-one-shot command and its run-status endpoint. Scheduling remains separate from
-API startup.
+The next increment should configure external daily execution of the one-shot
+command and point an uptime monitor at the ingestion health endpoint. Scheduling
+remains separate from API startup and requires a deployed API plus database
+credentials.

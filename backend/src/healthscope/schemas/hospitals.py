@@ -80,6 +80,16 @@ class HospitalIngestionRunState(StrEnum):
     FAILED = "failed"
 
 
+class HospitalIngestionHealthReason(StrEnum):
+    """Machine-readable reasons returned by the ingestion health probe."""
+
+    HEALTHY = "healthy"
+    INGESTION_IN_PROGRESS = "ingestion_in_progress"
+    NO_RUNS = "no_runs"
+    LATEST_RUN_FAILED = "latest_run_failed"
+    STALE = "stale"
+
+
 class HospitalIngestionStatus(BaseModel):
     """Latest ingestion lifecycle plus freshness of the last successful snapshot."""
 
@@ -102,3 +112,13 @@ class HospitalIngestionStatus(BaseModel):
     freshness_seconds: int | None = Field(default=None, ge=0)
     stale_after_seconds: int = Field(ge=1)
     is_stale: bool
+
+
+class HospitalIngestionHealth(BaseModel):
+    """Monitor-ready health result for the hospital ingestion pipeline."""
+
+    model_config = ConfigDict(frozen=True)
+
+    healthy: bool
+    reason: HospitalIngestionHealthReason
+    latest_run: HospitalIngestionStatus | None

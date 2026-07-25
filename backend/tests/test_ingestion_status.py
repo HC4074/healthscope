@@ -337,3 +337,175 @@ def test_latest_ingestion_endpoint_returns_not_found_without_runs(tmp_path: Path
     assert response.status_code == 404
     assert response.json()["detail"] == "No CMS hospital ingestion run is available."
     engine.dispose()
+
+
+def test_ingestion_health_endpoint_reports_no_runs(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'empty-ingestion-health.db'}"
+    engine = create_engine(database_url)
+    Base.metadata.create_all(engine)
+
+    def provide_session() -> Iterator[Session]:
+        with Session(engine) as session:
+            yield session
+
+    app = create_app(Settings(environment="test", database_url=database_url))
+    app.dependency_overrides[get_session] = provide_session
+    with TestClient(app) as client:
+        response = client.get("/api/v1/hospitals/ingestion/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "healthy": False,
+        "reason": "no_runs",
+        "latest_run": None,
+    }
+    engine.dispose()
+
+
+def test_ingestion_health_endpoint_tracks_success_progress_and_failure(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'ingestion-health.db'}"
+    engine = create_engine(database_url)
+    Base.metadata.create_all(engine)
+    observed_at = datetime.now(UTC)
+
+    with Session(engine) as session, session.begin():
+        retrieved_at = observed_at - timedelta(minutes=10)
+        successful_run = start_hospital_ingestion_run(
+            session,
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+            started_at=retrieved_at,
+        )
+        upsert_hospital_snapshots(
+            session,
+            [OFFICIAL_CMS_HOSPITAL],
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+        )
+        mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+            record_count=1,
+        )
+        finish_hospital_ingestion_run(
+            session,
+            run_id=successful_run.run_id,
+            status=HospitalIngestionRunState.SUCCEEDED,
+            expected_count=1,
+            fetched_count=1,
+            upserted_count=1,
+            pages=1,
+            request_attempts=1,
+            finished_at=retrieved_at + timedelta(minutes=1),
+        )
+        successful_run_id = successful_run.run_id
+
+    def provide_session() -> Iterator[Session]:
+        with Session(engine) as session:
+            yield session
+
+    app = create_app(Settings(environment="test", database_url=database_url))
+    app.dependency_overrides[get_session] = provide_session
+    with TestClient(app) as client:
+        healthy_response = client.get("/api/v1/hospitals/ingestion/health")
+        assert healthy_response.status_code == 200
+        assert healthy_response.json()["healthy"] is True
+        assert healthy_response.json()["reason"] == "healthy"
+        assert healthy_response.json()["latest_run"]["run_id"] == successful_run_id
+
+        with Session(engine) as session, session.begin():
+            running = start_hospital_ingestion_run(
+                session,
+                source_dataset_id=DATASET_ID,
+                retrieved_at=observed_at - timedelta(minutes=2),
+                started_at=observed_at - timedelta(minutes=2),
+            )
+            running_id = running.run_id
+
+        running_response = client.get("/api/v1/hospitals/ingestion/health")
+        assert running_response.status_code == 200
+        assert running_response.json()["healthy"] is True
+        assert running_response.json()["reason"] == "ingestion_in_progress"
+        assert running_response.json()["latest_run"]["run_id"] == running_id
+
+        with Session(engine) as session, session.begin():
+            finish_hospital_ingestion_run(
+                session,
+                run_id=running_id,
+                status=HospitalIngestionRunState.FAILED,
+                expected_count=5432,
+                fetched_count=100,
+                upserted_count=100,
+                pages=1,
+                request_attempts=3,
+                error=RuntimeError("CMS request failed"),
+                finished_at=observed_at - timedelta(minutes=1),
+            )
+
+        failed_response = client.get("/api/v1/hospitals/ingestion/health")
+
+    assert failed_response.status_code == 503
+    assert failed_response.json()["healthy"] is False
+    assert failed_response.json()["reason"] == "latest_run_failed"
+    assert failed_response.json()["latest_run"]["run_id"] == running_id
+    engine.dispose()
+
+
+def test_ingestion_health_endpoint_reports_stale_success(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'stale-ingestion-health.db'}"
+    engine = create_engine(database_url)
+    Base.metadata.create_all(engine)
+    retrieved_at = datetime.now(UTC) - timedelta(hours=2)
+
+    with Session(engine) as session, session.begin():
+        run = start_hospital_ingestion_run(
+            session,
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+            started_at=retrieved_at,
+        )
+        upsert_hospital_snapshots(
+            session,
+            [OFFICIAL_CMS_HOSPITAL],
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+        )
+        mark_hospital_snapshot_complete(
+            session,
+            source_dataset_id=DATASET_ID,
+            retrieved_at=retrieved_at,
+            record_count=1,
+        )
+        finish_hospital_ingestion_run(
+            session,
+            run_id=run.run_id,
+            status=HospitalIngestionRunState.SUCCEEDED,
+            expected_count=1,
+            fetched_count=1,
+            upserted_count=1,
+            pages=1,
+            request_attempts=1,
+            finished_at=retrieved_at + timedelta(minutes=1),
+        )
+
+    def provide_session() -> Iterator[Session]:
+        with Session(engine) as session:
+            yield session
+
+    app = create_app(
+        Settings(
+            environment="test",
+            database_url=database_url,
+            cms_ingestion_stale_after_hours=1,
+        )
+    )
+    app.dependency_overrides[get_session] = provide_session
+    with TestClient(app) as client:
+        response = client.get("/api/v1/hospitals/ingestion/health")
+
+    assert response.status_code == 503
+    assert response.json()["healthy"] is False
+    assert response.json()["reason"] == "stale"
+    assert response.json()["latest_run"]["is_stale"] is True
+    engine.dispose()
