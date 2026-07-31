@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     cms_ingestion_max_attempts: int = Field(default=3, ge=1, le=10)
     cms_ingestion_retry_delay_seconds: float = Field(default=1.0, ge=0, le=60)
     cms_ingestion_stale_after_hours: int = Field(default=26, ge=1, le=168)
+    cdc_data_base_url: str = Field(default="https://data.cdc.gov", pattern=r"^https://")
+    cdc_places_county_dataset_id: str = Field(default="swc5-untb", pattern=r"^[a-z0-9]+-[a-z0-9]+$")
+    cdc_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
 
 
 @lru_cache

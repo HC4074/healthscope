@@ -8,8 +8,10 @@ application behavior, and storage can evolve independently.
 1. FastAPI routes validate HTTP parameters and map upstream failures to stable
    service responses.
 2. Typed source clients retrieve and validate records from official public
-   healthcare APIs. The current client uses CMS Provider Data Catalog dataset
-   `xubh-q36u`; no bundled or fabricated healthcare dataset is used.
+   healthcare APIs. The CMS client uses Provider Data Catalog dataset
+   `xubh-q36u`. The CDC client uses PLACES 2025 county dataset `swc5-untb` and
+   exposes only available age-adjusted prevalence estimates for a validated
+   state and measure. No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
    source dataset, UTC snapshot date, and facility ID.
@@ -41,7 +43,7 @@ provided through environment variables rather than committed configuration.
 
 ## Next boundary
 
-The next increment should configure external daily execution of the one-shot
-command and point an uptime monitor at the ingestion health endpoint. Scheduling
-remains separate from API startup and requires a deployed API plus database
-credentials.
+Hospital scheduling remains separate from API startup and requires a deployed
+API plus database credentials. The next data increment should persist and
+summarize selected CDC PLACES measures after the live response contract has been
+exercised, or introduce the milestone's third official public source.

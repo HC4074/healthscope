@@ -25,6 +25,22 @@ The integration has a 10-second upstream timeout by default. Its base URL,
 dataset identifier, and timeout can be changed with the variables documented in
 `.env.example`.
 
+`GET /api/v1/community-health/counties` returns current county-level prevalence
+estimates from the official CDC
+[PLACES 2025 county dataset](https://data.cdc.gov/d/swc5-untb). The required
+`state` parameter is an uppercase two-letter code and `measure_id` is a CDC
+measure identifier such as `DIABETES`, `OBESITY`, or `ACCESS2`. Use `limit`
+(1-100, default 25) and `offset` (default 0) to page through matching counties.
+For comparable county KPIs, HealthScope requests age-adjusted prevalence rows
+with available values and returns CDC confidence intervals, population context,
+coordinates, provenance, and the filtered total. Invalid filters are rejected
+before they reach the upstream query.
+
+The CDC base URL, dataset identifier, and 10-second request timeout can be
+changed with `HEALTHSCOPE_CDC_DATA_BASE_URL`,
+`HEALTHSCOPE_CDC_PLACES_COUNTY_DATASET_ID`, and
+`HEALTHSCOPE_CDC_REQUEST_TIMEOUT_SECONDS`.
+
 `GET /api/v1/hospitals/snapshots/latest` returns metadata for the newest
 verified complete snapshot, including its retrieval timestamp, total record
 count, and hospital counts by state or territory. It returns `404` until a full

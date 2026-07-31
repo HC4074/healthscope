@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from healthscope import __version__
+from healthscope.api.routes.community_health import router as community_health_router
 from healthscope.api.routes.health import router as health_router
 from healthscope.api.routes.hospitals import router as hospitals_router
 from healthscope.config import Settings, get_settings
@@ -29,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(health_router, prefix=resolved_settings.api_prefix)
     application.include_router(hospitals_router, prefix=resolved_settings.api_prefix)
+    application.include_router(community_health_router, prefix=resolved_settings.api_prefix)
     return application
 
 
