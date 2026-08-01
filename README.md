@@ -27,7 +27,10 @@ endpoint, paginated live CDC PLACES county-health and measure-catalog endpoints,
 versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
 monitor-ready health checks, an explicit full-dataset ingestion command,
-automated backend quality checks, and a PostgreSQL development container.
+automated backend quality checks, a PostgreSQL development container, and a
+responsive React community-health explorer. The dashboard discovers its measure
+filters from the live CDC catalog, presents paginated county estimates and
+confidence intervals, and retains source provenance through every view.
 The first milestone targets three live healthcare data sources, REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md).
@@ -41,7 +44,8 @@ docker compose up --build
 ```
 
 Then open `http://localhost:8000/docs` or check
-`http://localhost:8000/api/v1/health`.
+`http://localhost:8000/api/v1/health`. The dashboard is available at
+`http://localhost:3000`.
 
 ## Data policy
 
