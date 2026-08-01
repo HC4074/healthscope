@@ -28,7 +28,7 @@ class CountyHealthEstimate(BaseModel):
 
 
 class CommunityHealthDataSource(BaseModel):
-    """Provenance for a CDC PLACES county response."""
+    """Provenance for a CDC PLACES response."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -50,4 +50,26 @@ class CountyHealthPage(BaseModel):
     offset: int = Field(ge=0)
     state: str = Field(pattern=r"^[A-Z]{2}$")
     measure_id: str = Field(pattern=r"^[A-Z0-9_]{2,32}$")
+    source: CommunityHealthDataSource
+
+
+class CommunityHealthMeasure(BaseModel):
+    """One discoverable CDC PLACES age-adjusted prevalence measure."""
+
+    model_config = ConfigDict(frozen=True)
+
+    measure_id: str = Field(pattern=r"^[A-Z0-9_]{2,32}$")
+    measure: str
+    category: str
+    latest_year: int = Field(ge=2000, le=2100)
+    county_count: int = Field(gt=0)
+
+
+class CommunityHealthMeasureCatalog(BaseModel):
+    """Current measure choices derived from live CDC PLACES data."""
+
+    model_config = ConfigDict(frozen=True)
+
+    items: list[CommunityHealthMeasure]
+    total: int = Field(ge=0)
     source: CommunityHealthDataSource

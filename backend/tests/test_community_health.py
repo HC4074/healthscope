@@ -14,6 +14,8 @@ from healthscope.config import Settings
 from healthscope.main import create_app
 from healthscope.schemas.community_health import (
     CommunityHealthDataSource,
+    CommunityHealthMeasure,
+    CommunityHealthMeasureCatalog,
     CountyHealthEstimate,
     CountyHealthPage,
 )
@@ -57,6 +59,24 @@ def county_health_page() -> CountyHealthPage:
     )
 
 
+def measure_catalog() -> CommunityHealthMeasureCatalog:
+    """Return a measure catalog based on live CDC PLACES aggregates."""
+
+    return CommunityHealthMeasureCatalog(
+        items=[
+            CommunityHealthMeasure(
+                measure_id="DIABETES",
+                measure="Diagnosed diabetes among adults",
+                category="Health Outcomes",
+                latest_year=2023,
+                county_count=2957,
+            )
+        ],
+        total=1,
+        source=county_health_page().source,
+    )
+
+
 class StubCDCPlacesClient:
     """Controllable CDC PLACES client used by endpoint tests."""
 
@@ -86,6 +106,53 @@ def client_for(result: CountyHealthPage | Exception) -> TestClient:
     app = create_app(Settings(environment="test"))
     app.dependency_overrides[get_cdc_places_client] = lambda: StubCDCPlacesClient(result)
     return TestClient(app)
+
+
+class StubCDCMeasureClient:
+    """Controllable CDC PLACES measure client used by endpoint tests."""
+
+    def __init__(self, result: CommunityHealthMeasureCatalog | Exception) -> None:
+        self.result = result
+
+    async def fetch_measure_catalog(self) -> CommunityHealthMeasureCatalog:
+        if isinstance(self.result, Exception):
+            raise self.result
+        return self.result
+
+
+def measure_client_for(result: CommunityHealthMeasureCatalog | Exception) -> TestClient:
+    """Create an app with its CDC measure boundary replaced by a stub."""
+
+    app = create_app(Settings(environment="test"))
+    app.dependency_overrides[get_cdc_places_client] = lambda: StubCDCMeasureClient(result)
+    return TestClient(app)
+
+
+def test_measure_catalog_endpoint_returns_live_discovery_contract() -> None:
+    with measure_client_for(measure_catalog()) as client:
+        response = client.get("/api/v1/community-health/measures")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["items"][0] == {
+        "measure_id": "DIABETES",
+        "measure": "Diagnosed diabetes among adults",
+        "category": "Health Outcomes",
+        "latest_year": 2023,
+        "county_count": 2957,
+    }
+    assert payload["source"]["estimate_type"] == "Age-adjusted prevalence"
+
+
+def test_measure_catalog_endpoint_maps_cdc_failures() -> None:
+    with measure_client_for(CDCUpstreamTimeoutError()) as client:
+        timeout_response = client.get("/api/v1/community-health/measures")
+    with measure_client_for(CDCDataError()) as client:
+        invalid_response = client.get("/api/v1/community-health/measures")
+
+    assert timeout_response.status_code == 504
+    assert invalid_response.status_code == 502
 
 
 def test_county_health_endpoint_returns_paginated_live_data_contract() -> None:
@@ -138,6 +205,7 @@ def test_openapi_schema_exposes_county_health_endpoint() -> None:
 
     assert response.status_code == 200
     assert "/api/v1/community-health/counties" in response.json()["paths"]
+    assert "/api/v1/community-health/measures" in response.json()["paths"]
 
 
 def test_cdc_dependency_builds_client_from_settings() -> None:

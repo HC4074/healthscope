@@ -11,7 +11,10 @@ application behavior, and storage can evolve independently.
    healthcare APIs. The CMS client uses Provider Data Catalog dataset
    `xubh-q36u`. The CDC client uses PLACES 2025 county dataset `swc5-untb` and
    exposes only available age-adjusted prevalence estimates for a validated
-   state and measure. No bundled or fabricated healthcare dataset is used.
+   state and measure. It also derives the available measure catalog directly
+   from live CDC aggregates, allowing clients to discover valid measure IDs,
+   labels, categories, latest years, and county coverage without hard-coding
+   source metadata. No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
    source dataset, UTC snapshot date, and facility ID.
@@ -44,6 +47,6 @@ provided through environment variables rather than committed configuration.
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed
-API plus database credentials. The next data increment should persist and
-summarize selected CDC PLACES measures after the live response contract has been
-exercised, or introduce the milestone's third official public source.
+API plus database credentials. The next data increment should introduce the
+milestone's third official public source, or begin the first dashboard view using
+the CDC measure catalog and county response contracts.

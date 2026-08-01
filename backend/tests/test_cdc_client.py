@@ -43,6 +43,19 @@ def cdc_record(**overrides: object) -> dict[str, object]:
     return record | overrides
 
 
+def cdc_measure(**overrides: object) -> dict[str, object]:
+    """Return a captured aggregate from the official CDC dataset."""
+
+    record: dict[str, object] = {
+        "measureid": "DIABETES",
+        "measure": "Diagnosed diabetes among adults",
+        "category": "Health Outcomes",
+        "latest_year": "2023",
+        "county_count": "2957",
+    }
+    return record | overrides
+
+
 def build_client(handler: Callable[[httpx.Request], httpx.Response]) -> CDCPlacesClient:
     """Build a client whose HTTP layer is deterministic."""
 
@@ -52,6 +65,87 @@ def build_client(handler: Callable[[httpx.Request], httpx.Response]) -> CDCPlace
         timeout_seconds=1,
         transport=httpx.MockTransport(handler),
     )
+
+
+def test_fetch_measure_catalog_validates_and_maps_live_cdc_aggregates() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.url.path == "/resource/swc5-untb.json"
+        if "$group" not in request.url.params:
+            assert request.url.params["$select"] == "count(distinct measureid) as total"
+            return httpx.Response(200, json=[{"total": "2"}])
+        assert "max(year) as latest_year" in request.url.params["$select"]
+        assert "count(distinct locationid) as county_count" in request.url.params["$select"]
+        assert request.url.params["$where"] == (
+            "datavaluetypeid = 'AgeAdjPrv' AND data_value IS NOT NULL"
+        )
+        assert request.url.params["$group"] == "measureid,measure,category"
+        assert request.url.params["$order"] == "category ASC,measure ASC,measureid ASC"
+        assert request.url.params["$limit"] == "1000"
+        return httpx.Response(
+            200,
+            json=[
+                cdc_measure(measureid="DISABILITY", measure="Any disability among adults"),
+                cdc_measure(),
+            ],
+        )
+
+    catalog = asyncio.run(build_client(handler).fetch_measure_catalog())
+
+    assert len(requests) == 2
+    assert catalog.total == 2
+    assert catalog.items[0].measure_id == "DISABILITY"
+    assert catalog.items[1].latest_year == 2023
+    assert catalog.items[1].county_count == 2957
+    assert catalog.source.dataset_url == "https://cdc.example/d/swc5-untb"
+
+
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout, httpx.ConnectError])
+def test_fetch_measure_catalog_maps_network_failures_to_domain_errors(
+    failure: type[httpx.RequestError],
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise failure("CDC request failed", request=request)
+
+    expected_error = CDCUpstreamTimeoutError if failure is httpx.ReadTimeout else CDCUpstreamError
+    with pytest.raises(expected_error):
+        asyncio.run(build_client(handler).fetch_measure_catalog())
+
+
+def test_fetch_measure_catalog_maps_http_failure_to_domain_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, request=request)
+
+    with pytest.raises(CDCUpstreamError):
+        asyncio.run(build_client(handler).fetch_measure_catalog())
+
+
+@pytest.mark.parametrize(
+    ("count_payload", "catalog_payload"),
+    [
+        ([], [cdc_measure()]),
+        ([{"total": "0"}], []),
+        ([{"total": "1"}], [cdc_measure(latest_year="invalid")]),
+        ([{"total": "1"}], [cdc_measure(county_count="0")]),
+        (
+            [{"total": "2"}],
+            [cdc_measure(), cdc_measure(measure="Conflicting label")],
+        ),
+        ([{"total": "2"}], [cdc_measure()]),
+    ],
+)
+def test_fetch_measure_catalog_rejects_invalid_or_inconsistent_payloads(
+    count_payload: object,
+    catalog_payload: object,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = catalog_payload if "$group" in request.url.params else count_payload
+        return httpx.Response(200, json=payload)
+
+    with pytest.raises(CDCDataError):
+        asyncio.run(build_client(handler).fetch_measure_catalog())
 
 
 def test_fetch_county_estimates_validates_and_maps_live_cdc_fields() -> None:

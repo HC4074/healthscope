@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from healthscope.api.dependencies import SettingsDependency
 from healthscope.schemas.community_health import (
     CommunityHealthDataSource,
+    CommunityHealthMeasure,
+    CommunityHealthMeasureCatalog,
     CountyHealthEstimate,
     CountyHealthPage,
 )
@@ -103,6 +105,29 @@ class _CDCCount(BaseModel):
     total: int = Field(ge=0)
 
 
+class _CDCMeasureSummary(BaseModel):
+    """Validated aggregate describing one available CDC PLACES measure."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    measureid: str = Field(pattern=r"^[A-Z0-9_]{2,32}$")
+    measure: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    latest_year: int = Field(ge=2000, le=2100)
+    county_count: int = Field(gt=0)
+
+    def to_public(self) -> CommunityHealthMeasure:
+        """Map CDC aggregate fields to the public catalog schema."""
+
+        return CommunityHealthMeasure(
+            measure_id=self.measureid,
+            measure=self.measure,
+            category=self.category,
+            latest_year=self.latest_year,
+            county_count=self.county_count,
+        )
+
+
 class CDCPlacesClient:
     """Retrieve current county estimates from CDC PLACES."""
 
@@ -126,6 +151,69 @@ class CDCPlacesClient:
             timeout=self._timeout_seconds,
             transport=self._transport,
             headers={"User-Agent": "HealthScope/0.1"},
+        )
+
+    def _source(self) -> CommunityHealthDataSource:
+        """Build source provenance shared by CDC PLACES responses."""
+
+        return CommunityHealthDataSource(
+            name=CDC_SOURCE_NAME,
+            dataset_name=CDC_PLACES_COUNTY_DATASET_NAME,
+            dataset_url=f"{self._base_url}/d/{self._dataset_id}",
+            retrieved_at=datetime.now(UTC),
+            estimate_type=CDC_AGE_ADJUSTED_ESTIMATE_TYPE,
+        )
+
+    async def fetch_measure_catalog(self) -> CommunityHealthMeasureCatalog:
+        """Fetch measures currently available as age-adjusted county estimates."""
+
+        url = f"{self._base_url}/resource/{self._dataset_id}.json"
+        where = "datavaluetypeid = 'AgeAdjPrv' AND data_value IS NOT NULL"
+        count_params = {"$select": "count(distinct measureid) as total", "$where": where}
+        catalog_params: dict[str, str | int] = {
+            "$select": (
+                "measureid,measure,category,max(year) as latest_year,"
+                "count(distinct locationid) as county_count"
+            ),
+            "$where": where,
+            "$group": "measureid,measure,category",
+            "$order": "category ASC,measure ASC,measureid ASC",
+            "$limit": 1000,
+        }
+        try:
+            async with self._build_http_client() as client:
+                count_response = await client.get(url, params=count_params)
+                count_response.raise_for_status()
+                catalog_response = await client.get(url, params=catalog_params)
+                catalog_response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise CDCUpstreamTimeoutError from exc
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+            raise CDCUpstreamError from exc
+
+        try:
+            count_payload = count_response.json()
+            if not isinstance(count_payload, list) or len(count_payload) != 1:
+                raise ValueError("CDC count response must contain exactly one row")
+            count = _CDCCount.model_validate(count_payload[0])
+            records = [
+                _CDCMeasureSummary.model_validate(record) for record in catalog_response.json()
+            ]
+        except (TypeError, ValueError, ValidationError) as exc:
+            raise CDCDataError from exc
+
+        measure_ids = [record.measureid for record in records]
+        if count.total == 0 or not records:
+            raise CDCDataError("CDC returned an empty measure catalog")
+        if len(measure_ids) != len(set(measure_ids)):
+            raise CDCDataError("CDC returned duplicate measure identifiers")
+        if len(records) != count.total:
+            raise CDCDataError("CDC returned an incomplete measure catalog")
+
+        return CommunityHealthMeasureCatalog(
+            items=[record.to_public() for record in records],
+            total=len(records),
+            source=self._source(),
         )
 
     async def fetch_county_estimates(
@@ -185,13 +273,7 @@ class CDCPlacesClient:
             offset=offset,
             state=state,
             measure_id=measure_id,
-            source=CommunityHealthDataSource(
-                name=CDC_SOURCE_NAME,
-                dataset_name=CDC_PLACES_COUNTY_DATASET_NAME,
-                dataset_url=f"{self._base_url}/d/{self._dataset_id}",
-                retrieved_at=datetime.now(UTC),
-                estimate_type=CDC_AGE_ADJUSTED_ESTIMATE_TYPE,
-            ),
+            source=self._source(),
         )
 
 

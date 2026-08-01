@@ -36,6 +36,13 @@ with available values and returns CDC confidence intervals, population context,
 coordinates, provenance, and the filtered total. Invalid filters are rejected
 before they reach the upstream query.
 
+`GET /api/v1/community-health/measures` discovers the age-adjusted prevalence
+measures currently available in that live dataset. Each measure includes its CDC
+identifier, label, category, latest data year, and number of counties with an
+available value, so clients can build filters without a hard-coded catalog.
+The response is grouped and derived by CDC at request time and includes the same
+source provenance as county estimates.
+
 The CDC base URL, dataset identifier, and 10-second request timeout can be
 changed with `HEALTHSCOPE_CDC_DATA_BASE_URL`,
 `HEALTHSCOPE_CDC_PLACES_COUNTY_DATASET_ID`, and
