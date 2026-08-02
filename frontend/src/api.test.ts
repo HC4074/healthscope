@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchCountyHealth, fetchMeasureCatalog } from "./api";
+import { ApiError, fetchCountyHealth, fetchDrugRecalls, fetchMeasureCatalog } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -25,11 +25,13 @@ describe("community health API client", () => {
   });
 
   it("encodes county filters and pagination", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ items: [], total: 0 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [], total: 0 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -37,6 +39,32 @@ describe("community health API client", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/community-health/counties?state=CA&measure_id=ACCESS2&limit=25&offset=50",
+      expect.any(Object),
+    );
+  });
+
+  it("encodes FDA classification and pagination without inventing a default filter", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [], total: 0 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchDrugRecalls({ classification: "Class I", limit: 10, offset: 20 });
+    await fetchDrugRecalls({ limit: 10, offset: 0 });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/drug-recalls?classification=Class+I&limit=10&offset=20",
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/drug-recalls?limit=10&offset=0",
       expect.any(Object),
     );
   });

@@ -1,4 +1,9 @@
-import type { CommunityHealthMeasureCatalog, CountyHealthPage } from "./types";
+import type {
+  CommunityHealthMeasureCatalog,
+  CountyHealthPage,
+  DrugRecallPage,
+  RecallClassification,
+} from "./types";
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, "") ?? "";
 
@@ -70,4 +75,26 @@ export function fetchCountyHealth({
     offset: String(offset),
   });
   return request(`/api/v1/community-health/counties?${query.toString()}`, signal);
+}
+
+interface DrugRecallQuery {
+  classification?: RecallClassification;
+  limit: number;
+  offset: number;
+  signal?: AbortSignal;
+}
+
+export function fetchDrugRecalls({
+  classification,
+  limit,
+  offset,
+  signal,
+}: DrugRecallQuery): Promise<DrugRecallPage> {
+  const query = new URLSearchParams();
+  if (classification) {
+    query.set("classification", classification);
+  }
+  query.set("limit", String(limit));
+  query.set("offset", String(offset));
+  return request(`/api/v1/drug-recalls?${query.toString()}`, signal);
 }

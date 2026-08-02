@@ -29,9 +29,11 @@ versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
 monitor-ready health checks, an explicit full-dataset ingestion command,
 automated backend quality checks, a PostgreSQL development container, and a
-responsive React community-health explorer. The dashboard discovers its measure
-filters from the live CDC catalog, presents paginated county estimates and
-confidence intervals, and retains source provenance through every view.
+responsive React community-health and drug-recall explorers. The dashboard
+discovers its measure filters from the live CDC catalog, presents paginated
+county estimates and confidence intervals, and lazily loads newest-first FDA
+recall reports with hazard-class filtering, safety disclaimers, and source
+provenance.
 The API now covers three live public sources; the first milestone also targets REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md).

@@ -1,9 +1,12 @@
 # HealthScope dashboard
 
 The responsive React dashboard for exploring live HealthScope public-health
-data. The first view discovers its measure options from the API and presents
-paginated county estimates from CDC PLACES, including confidence intervals and
-source provenance. It contains no bundled healthcare dataset.
+data. The community-health view discovers its measure options from the API and
+presents paginated county estimates from CDC PLACES, including confidence
+intervals and source provenance. An on-demand drug-recall view presents
+newest-first FDA enforcement reports with hazard-class filtering, source
+freshness, FDA terms, pagination, and prominent medical-use disclaimers. It
+contains no bundled healthcare dataset.
 
 ## Local development
 

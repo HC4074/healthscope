@@ -43,9 +43,9 @@ application behavior, and storage can evolve independently.
 ## Frontend flow
 
 1. A React, TypeScript, Vite, Tailwind CSS, and Recharts application provides
-   the first interactive dashboard view. It requests the CDC measure catalog at
-   runtime, so available healthcare measures and labels are never fabricated or
-   frozen into the browser bundle.
+   interactive community-health and drug-recall views. It requests the CDC
+   measure catalog at runtime, so available healthcare measures and labels are
+   never fabricated or frozen into the browser bundle.
 2. State and measure filters query the typed county endpoint in bounded pages.
    The view shows current-page comparisons, explicit confidence intervals,
    population context, loading/error/empty states, and a link to the exact
@@ -53,9 +53,12 @@ application behavior, and storage can evolve independently.
 3. Browser requests stay same-origin under `/api`. Vite proxies that path during
    local development, while the production Nginx container routes it to the API
    service. This avoids enabling broad cross-origin access on the backend.
-4. The chart code is loaded on demand to keep the initial application bundle
-   small. Frontend CI independently enforces typed builds, lint, and component
-   and API-boundary tests.
+4. The FDA recall explorer and chart code are loaded on demand to keep the
+   initial application bundle small. The recall view applies exact FDA hazard
+   classes, uses bounded newest-first pagination, exposes source freshness and
+   terms, and keeps FDA's medical-care warning prominent. Frontend CI
+   independently enforces typed builds, lint, and component and API-boundary
+   tests.
 
 ## Current deployment boundary
 
@@ -70,6 +73,7 @@ provided through environment variables rather than committed configuration.
 Hospital scheduling remains separate from API startup and requires a deployed
 API plus database credentials. Census population and demographic context remains
 a natural complement to the county explorer, but Census data queries now require
-an API key. Until that credential is configured, the next unblocked dashboard
-increment is a clearly disclaimed FDA drug recall view backed by the new typed
-API contract.
+an API key. The clearly disclaimed FDA drug recall view is now backed by the
+typed live API contract. The next unblocked milestone increment is deployment
+readiness or a cross-source dashboard summary; Census enrichment remains queued
+until a Census API key is configured.

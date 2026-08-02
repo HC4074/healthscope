@@ -47,3 +47,43 @@ export interface CountyHealthPage {
   measure_id: string;
   source: CommunityHealthDataSource;
 }
+
+export type RecallClassification = "Class I" | "Class II" | "Class III";
+
+export interface DrugRecall {
+  recall_number: string;
+  event_id: string | null;
+  classification: RecallClassification;
+  status: "Ongoing" | "Completed" | "Terminated" | null;
+  recalling_firm: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  product_description: string;
+  reason_for_recall: string;
+  voluntary_mandated: string | null;
+  distribution_pattern: string;
+  product_quantity: string | null;
+  recall_initiation_date: string | null;
+  report_date: string;
+}
+
+export interface DrugRecallDataSource {
+  name: string;
+  dataset_name: string;
+  dataset_url: string;
+  retrieved_at: string;
+  last_updated: string;
+  disclaimer: string;
+  terms_url: string;
+  license_url: string;
+}
+
+export interface DrugRecallPage {
+  items: DrugRecall[];
+  total: number;
+  limit: number;
+  offset: number;
+  classification: RecallClassification | null;
+  source: DrugRecallDataSource;
+}

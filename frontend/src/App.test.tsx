@@ -17,6 +17,9 @@ vi.mock("./api", () => ({
 }));
 
 vi.mock("./PrevalenceChart", () => ({ default: () => <div>County comparison chart</div> }));
+vi.mock("./DrugRecallExplorer", () => ({
+  default: () => <h1>Follow public drug recalls, straight from FDA.</h1>,
+}));
 
 const source = {
   name: "Centers for Disease Control and Prevention",
@@ -143,5 +146,18 @@ describe("community health explorer", () => {
 
     expect(await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" })).toBeVisible();
     expect(mockedCounties).toHaveBeenCalledTimes(2);
+  });
+
+  it("switches to the lazy FDA dashboard view from primary navigation", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" });
+
+    await user.click(screen.getByRole("button", { name: "Drug recalls" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Follow public drug recalls, straight from FDA." }),
+    ).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Diagnosed diabetes among adults" })).not.toBeInTheDocument();
   });
 });

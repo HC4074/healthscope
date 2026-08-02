@@ -10,6 +10,7 @@ import type {
 
 const PAGE_SIZE = 25;
 const PrevalenceChart = lazy(() => import("./PrevalenceChart"));
+const DrugRecallExplorer = lazy(() => import("./DrugRecallExplorer"));
 
 interface ActiveQuery {
   state: string;
@@ -268,6 +269,7 @@ function ResultsPanel({
 }
 
 export default function App() {
+  const [view, setView] = useState<"community" | "recalls">("community");
   const [catalog, setCatalog] = useState<RequestState<CommunityHealthMeasureCatalog>>({
     status: "loading",
   });
@@ -365,15 +367,27 @@ export default function App() {
           <span>HealthScope</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a className="active-nav" href="#explorer">
+          <button
+            className={view === "community" ? "active-nav" : undefined}
+            type="button"
+            onClick={() => setView("community")}
+          >
             Community health
-          </a>
-          <a href="#source">Data source</a>
+          </button>
+          <button
+            className={view === "recalls" ? "active-nav" : undefined}
+            type="button"
+            onClick={() => setView("recalls")}
+          >
+            Drug recalls
+          </button>
         </nav>
         <span className="header-badge">Public data · No PHI</span>
       </header>
 
       <main id="top">
+        {view === "community" ? (
+          <>
         <section className="hero" id="explorer">
           <div className="hero-copy">
             <p className="eyebrow">Community health explorer</p>
@@ -461,6 +475,18 @@ export default function App() {
             />
           )}
         </section>
+          </>
+        ) : (
+          <Suspense
+            fallback={
+              <section className="content-wrap lazy-view-loading" aria-live="polite">
+                Loading the drug recall explorer…
+              </section>
+            }
+          >
+            <DrugRecallExplorer />
+          </Suspense>
+        )}
       </main>
 
       <footer id="source">
@@ -470,7 +496,7 @@ export default function App() {
           </a>
           <p>Public healthcare data, made easier to understand.</p>
         </div>
-        <p>Built from official CDC PLACES data. Not medical advice.</p>
+        <p>Built from official CDC and FDA public data. Not medical advice.</p>
       </footer>
     </div>
   );
