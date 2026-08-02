@@ -14,7 +14,10 @@ application behavior, and storage can evolve independently.
    state and measure. It also derives the available measure catalog directly
    from live CDC aggregates, allowing clients to discover valid measure IDs,
    labels, categories, latest years, and county coverage without hard-coding
-   source metadata. No bundled or fabricated healthcare dataset is used.
+   source metadata. A separate FDA client retrieves newest-first drug recall
+   enforcement reports from openFDA, validates hazard classes, dates, ordering,
+   pagination, and source metadata, and preserves FDA's medical-use disclaimer.
+   No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
    source dataset, UTC snapshot date, and facility ID.
@@ -65,6 +68,8 @@ provided through environment variables rather than committed configuration.
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed
-API plus database credentials. The next milestone increment should introduce a
-third official public source, with Census population and demographic context as
-the natural complement to the county explorer.
+API plus database credentials. Census population and demographic context remains
+a natural complement to the county explorer, but Census data queries now require
+an API key. Until that credential is configured, the next unblocked dashboard
+increment is a clearly disclaimed FDA drug recall view backed by the new typed
+API contract.

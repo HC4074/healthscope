@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     cdc_data_base_url: str = Field(default="https://data.cdc.gov", pattern=r"^https://")
     cdc_places_county_dataset_id: str = Field(default="swc5-untb", pattern=r"^[a-z0-9]+-[a-z0-9]+$")
     cdc_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
+    fda_api_base_url: str = Field(default="https://api.fda.gov", pattern=r"^https://")
+    fda_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
+    fda_api_key: SecretStr | None = None
 
 
 @lru_cache

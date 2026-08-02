@@ -48,6 +48,21 @@ changed with `HEALTHSCOPE_CDC_DATA_BASE_URL`,
 `HEALTHSCOPE_CDC_PLACES_COUNTY_DATASET_ID`, and
 `HEALTHSCOPE_CDC_REQUEST_TIMEOUT_SECONDS`.
 
+`GET /api/v1/drug-recalls` returns newest-first publicly releasable drug recall
+enforcement reports from the official FDA Recall Enterprise System through
+openFDA. Use `classification` (`Class I`, `Class II`, or `Class III`) to apply an
+exact health-hazard class filter, and `limit` (1-100, default 25) plus `offset`
+(0-25,900) for bounded paging. Responses include FDA's dataset update date,
+disclaimer, terms, license, and retrieval timestamp. Recall reports are public
+context only: FDA explicitly warns against using openFDA for medical-care
+decisions, public alerts, or recall lifecycle tracking.
+
+The FDA base URL and 10-second request timeout can be changed with
+`HEALTHSCOPE_FDA_API_BASE_URL` and `HEALTHSCOPE_FDA_REQUEST_TIMEOUT_SECONDS`.
+Anonymous requests use openFDA's public quota. Set the optional secret
+`HEALTHSCOPE_FDA_API_KEY` to use the larger authenticated daily quota; the key is
+passed only to FDA and is never returned by HealthScope.
+
 `GET /api/v1/hospitals/snapshots/latest` returns metadata for the newest
 verified complete snapshot, including its retrieval timestamp, total record
 count, and hospital counts by state or territory. It returns `404` until a full

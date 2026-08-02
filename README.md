@@ -24,6 +24,7 @@ healthcare KPIs, and exposing insights through APIs and interactive dashboards.
 Phase 1 is in progress. The repository includes a typed FastAPI service, a
 versioned health endpoint, a paginated live CMS Hospital General Information
 endpoint, paginated live CDC PLACES county-health and measure-catalog endpoints,
+and newest-first live FDA drug recall enforcement reports,
 versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
 monitor-ready health checks, an explicit full-dataset ingestion command,
@@ -31,7 +32,7 @@ automated backend quality checks, a PostgreSQL development container, and a
 responsive React community-health explorer. The dashboard discovers its measure
 filters from the live CDC catalog, presents paginated county estimates and
 confidence intervals, and retains source provenance through every view.
-The first milestone targets three live healthcare data sources, REST APIs,
+The API now covers three live public sources; the first milestone also targets REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md).
 
