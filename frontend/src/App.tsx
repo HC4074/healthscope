@@ -1,6 +1,14 @@
-import { FormEvent, lazy, Suspense, useEffect, useState } from "react";
+import { FormEvent, lazy, type MouseEvent, Suspense, useEffect, useRef, useState } from "react";
 
 import { ApiError, fetchCountyHealth, fetchMeasureCatalog } from "./api";
+import {
+  COMMUNITY_PAGE_SIZE,
+  dashboardRouteUrl,
+  type CommunityRoute,
+  type DashboardRoute,
+  readDashboardRoute,
+  type RecallRoute,
+} from "./routing";
 import { STATES } from "./states";
 import type {
   CommunityHealthMeasure,
@@ -8,7 +16,6 @@ import type {
   CountyHealthPage,
 } from "./types";
 
-const PAGE_SIZE = 25;
 const PrevalenceChart = lazy(() => import("./PrevalenceChart"));
 const DrugRecallExplorer = lazy(() => import("./DrugRecallExplorer"));
 
@@ -53,6 +60,20 @@ function measureGroups(measures: CommunityHealthMeasure[]): Map<string, Communit
     groups.set(measure.category, group);
   }
   return groups;
+}
+
+function resolveCommunityRoute(
+  route: CommunityRoute,
+  catalog: CommunityHealthMeasureCatalog,
+): CommunityRoute | null {
+  const defaultMeasure =
+    catalog.items.find((measure) => measure.measure_id === "DIABETES") ?? catalog.items[0];
+  if (!defaultMeasure) {
+    return null;
+  }
+  const resolvedMeasure =
+    catalog.items.find((measure) => measure.measure_id === route.measureId) ?? defaultMeasure;
+  return { ...route, measureId: resolvedMeasure.measure_id };
 }
 
 function LoadingPanel() {
@@ -269,7 +290,14 @@ function ResultsPanel({
 }
 
 export default function App() {
-  const [view, setView] = useState<"community" | "recalls">("community");
+  const [route, setRoute] = useState<DashboardRoute>(() => readDashboardRoute(window.location));
+  const routeRef = useRef(route);
+  const lastCommunityRoute = useRef<CommunityRoute>({
+    view: "community",
+    state: "AL",
+    offset: 0,
+  });
+  const lastRecallRoute = useRef<RecallRoute>({ view: "recalls", offset: 0 });
   const [catalog, setCatalog] = useState<RequestState<CommunityHealthMeasureCatalog>>({
     status: "loading",
   });
@@ -283,19 +311,71 @@ export default function App() {
   const [countyAttempt, setCountyAttempt] = useState(0);
 
   useEffect(() => {
+    const onPopState = () => {
+      const requestedRoute = readDashboardRoute(window.location);
+      if (requestedRoute.view === "community" && catalog.status === "success") {
+        const resolvedRoute = resolveCommunityRoute(requestedRoute, catalog.data);
+        if (resolvedRoute) {
+          window.history.replaceState(null, "", dashboardRouteUrl(resolvedRoute));
+          setRoute(resolvedRoute);
+          setSelectedState(resolvedRoute.state);
+          setSelectedMeasure(resolvedRoute.measureId ?? "");
+          setCountyPage({ status: "loading" });
+          setActiveQuery({
+            state: resolvedRoute.state,
+            measureId: resolvedRoute.measureId ?? "",
+            offset: resolvedRoute.offset,
+          });
+          return;
+        }
+      }
+      setRoute(requestedRoute);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [catalog]);
+
+  useEffect(() => {
+    routeRef.current = route;
+    const canonicalUrl = dashboardRouteUrl(route);
+    if (`${window.location.pathname}${window.location.search}` !== canonicalUrl) {
+      window.history.replaceState(null, "", canonicalUrl);
+    }
+    if (route.view === "community") {
+      lastCommunityRoute.current = route;
+    } else {
+      lastRecallRoute.current = route;
+    }
+  }, [route]);
+
+  useEffect(() => {
+    if (route.view !== "community" || catalog.status !== "loading") {
+      return;
+    }
     const controller = new AbortController();
     void fetchMeasureCatalog(controller.signal)
       .then((result) => {
-        const initialMeasure =
-          result.items.find((measure) => measure.measure_id === "DIABETES") ?? result.items[0];
-        if (!initialMeasure) {
+        if (result.items.length === 0) {
           setCatalog({ status: "error", message: "CDC returned an empty measure catalog." });
           return;
         }
         setCatalog({ status: "success", data: result });
-        setSelectedMeasure(initialMeasure.measure_id);
-        setCountyPage({ status: "loading" });
-        setActiveQuery({ state: "AL", measureId: initialMeasure.measure_id, offset: 0 });
+        const currentRoute = routeRef.current;
+        if (currentRoute.view === "community") {
+          const resolvedRoute = resolveCommunityRoute(currentRoute, result);
+          if (resolvedRoute) {
+            window.history.replaceState(null, "", dashboardRouteUrl(resolvedRoute));
+            setRoute(resolvedRoute);
+            setSelectedState(resolvedRoute.state);
+            setSelectedMeasure(resolvedRoute.measureId ?? "");
+            setCountyPage({ status: "loading" });
+            setActiveQuery({
+              state: resolvedRoute.state,
+              measureId: resolvedRoute.measureId ?? "",
+              offset: resolvedRoute.offset,
+            });
+          }
+        }
       })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -303,17 +383,17 @@ export default function App() {
         }
       });
     return () => controller.abort();
-  }, [catalogAttempt]);
+  }, [catalog.status, catalogAttempt, route.view]);
 
   useEffect(() => {
-    if (!activeQuery) {
+    if (route.view !== "community" || !activeQuery) {
       return;
     }
     const controller = new AbortController();
     void fetchCountyHealth({
       state: activeQuery.state,
       measureId: activeQuery.measureId,
-      limit: PAGE_SIZE,
+      limit: COMMUNITY_PAGE_SIZE,
       offset: activeQuery.offset,
       signal: controller.signal,
     })
@@ -324,26 +404,71 @@ export default function App() {
         }
       });
     return () => controller.abort();
-  }, [activeQuery, countyAttempt]);
+  }, [activeQuery, countyAttempt, route.view]);
 
   const measures = catalog.status === "success" ? catalog.data.items : [];
   const groups = measureGroups(measures);
   const activeMeasure = measures.find(
     (measure) => measure.measure_id === activeQuery?.measureId,
   );
+  const communityDestination =
+    route.view === "community" ? route : lastCommunityRoute.current;
+  const recallDestination = route.view === "recalls" ? route : lastRecallRoute.current;
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (selectedMeasure) {
-      setCountyPage({ status: "loading" });
-      setActiveQuery({ state: selectedState, measureId: selectedMeasure, offset: 0 });
+      navigate({
+        view: "community",
+        state: selectedState,
+        measureId: selectedMeasure,
+        offset: 0,
+      });
     }
   }
 
   function changePage(offset: number) {
-    setCountyPage({ status: "loading" });
-    setActiveQuery((query) => (query ? { ...query, offset } : query));
+    if (route.view === "community") {
+      navigate({ ...route, offset });
+    }
     window.scrollTo({ top: 420, behavior: "smooth" });
+  }
+
+  function navigate(nextRoute: DashboardRoute) {
+    if (nextRoute.view === "community" && catalog.status === "success") {
+      nextRoute = resolveCommunityRoute(nextRoute, catalog.data) ?? nextRoute;
+    }
+    const nextUrl = dashboardRouteUrl(nextRoute);
+    if (`${window.location.pathname}${window.location.search}` === nextUrl) {
+      return;
+    }
+    window.history.pushState(null, "", nextUrl);
+    setRoute(nextRoute);
+    if (nextRoute.view === "community" && nextRoute.measureId) {
+      setSelectedState(nextRoute.state);
+      setSelectedMeasure(nextRoute.measureId);
+      setCountyPage({ status: "loading" });
+      setActiveQuery({
+        state: nextRoute.state,
+        measureId: nextRoute.measureId,
+        offset: nextRoute.offset,
+      });
+    }
+  }
+
+  function followDashboardLink(event: MouseEvent<HTMLAnchorElement>, nextRoute: DashboardRoute) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    navigate(nextRoute);
   }
 
   function retryCatalog() {
@@ -359,7 +484,12 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="HealthScope home">
+        <a
+          className="brand"
+          href={dashboardRouteUrl(communityDestination)}
+          aria-label="HealthScope home"
+          onClick={(event) => followDashboardLink(event, communityDestination)}
+        >
           <span className="brand-mark" aria-hidden="true">
             <span />
             <span />
@@ -367,26 +497,28 @@ export default function App() {
           <span>HealthScope</span>
         </a>
         <nav aria-label="Primary navigation">
-          <button
-            className={view === "community" ? "active-nav" : undefined}
-            type="button"
-            onClick={() => setView("community")}
+          <a
+            className={route.view === "community" ? "active-nav" : undefined}
+            href={dashboardRouteUrl(communityDestination)}
+            aria-current={route.view === "community" ? "page" : undefined}
+            onClick={(event) => followDashboardLink(event, communityDestination)}
           >
             Community health
-          </button>
-          <button
-            className={view === "recalls" ? "active-nav" : undefined}
-            type="button"
-            onClick={() => setView("recalls")}
+          </a>
+          <a
+            className={route.view === "recalls" ? "active-nav" : undefined}
+            href={dashboardRouteUrl(recallDestination)}
+            aria-current={route.view === "recalls" ? "page" : undefined}
+            onClick={(event) => followDashboardLink(event, recallDestination)}
           >
             Drug recalls
-          </button>
+          </a>
         </nav>
         <span className="header-badge">Public data · No PHI</span>
       </header>
 
       <main id="top">
-        {view === "community" ? (
+        {route.view === "community" ? (
           <>
         <section className="hero" id="explorer">
           <div className="hero-copy">
@@ -470,8 +602,8 @@ export default function App() {
             <ResultsPanel
               page={countyPage.data}
               measure={activeMeasure}
-              onPrevious={() => changePage(Math.max(0, countyPage.data.offset - PAGE_SIZE))}
-              onNext={() => changePage(countyPage.data.offset + PAGE_SIZE)}
+              onPrevious={() => changePage(Math.max(0, countyPage.data.offset - COMMUNITY_PAGE_SIZE))}
+              onNext={() => changePage(countyPage.data.offset + COMMUNITY_PAGE_SIZE)}
             />
           )}
         </section>
@@ -484,7 +616,11 @@ export default function App() {
               </section>
             }
           >
-            <DrugRecallExplorer />
+            <DrugRecallExplorer
+              key={dashboardRouteUrl(route)}
+              route={route}
+              onNavigate={navigate}
+            />
           </Suspense>
         )}
       </main>

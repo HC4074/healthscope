@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { ApiError, fetchDrugRecalls } from "./api";
+import { RECALL_PAGE_SIZE, type RecallRoute } from "./routing";
 import type { DrugRecall, DrugRecallPage, RecallClassification } from "./types";
 
-const PAGE_SIZE = 10;
 const CLASSIFICATIONS: RecallClassification[] = ["Class I", "Class II", "Class III"];
 
 type RequestState =
@@ -169,19 +169,24 @@ function RecallResults({
   );
 }
 
-export default function DrugRecallExplorer() {
-  const [selectedClassification, setSelectedClassification] = useState<RecallClassification | "">("");
-  const [activeClassification, setActiveClassification] = useState<RecallClassification | undefined>();
-  const [offset, setOffset] = useState(0);
+interface DrugRecallExplorerProps {
+  route: RecallRoute;
+  onNavigate: (route: RecallRoute) => void;
+}
+
+export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExplorerProps) {
+  const [selectedClassification, setSelectedClassification] = useState<RecallClassification | "">(
+    route.classification ?? "",
+  );
   const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState<RequestState>({ status: "loading" });
 
   useEffect(() => {
     const controller = new AbortController();
     void fetchDrugRecalls({
-      classification: activeClassification,
-      limit: PAGE_SIZE,
-      offset,
+      classification: route.classification,
+      limit: RECALL_PAGE_SIZE,
+      offset: route.offset,
       signal: controller.signal,
     })
       .then((result) => setPage({ status: "success", data: result }))
@@ -191,19 +196,22 @@ export default function DrugRecallExplorer() {
         }
       });
     return () => controller.abort();
-  }, [activeClassification, offset, attempt]);
+  }, [route.classification, route.offset, attempt]);
 
   function applyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPage({ status: "loading" });
-    setOffset(0);
-    setActiveClassification(selectedClassification || undefined);
+    onNavigate({
+      view: "recalls",
+      classification: selectedClassification || undefined,
+      offset: 0,
+    });
     setAttempt((value) => value + 1);
   }
 
   function changePage(nextOffset: number) {
     setPage({ status: "loading" });
-    setOffset(nextOffset);
+    onNavigate({ ...route, offset: nextOffset });
     window.scrollTo({ top: 420, behavior: "smooth" });
   }
 
@@ -250,8 +258,8 @@ export default function DrugRecallExplorer() {
         {page.status === "success" && page.data.items.length > 0 && (
           <RecallResults
             page={page.data}
-            onPrevious={() => changePage(Math.max(0, page.data.offset - PAGE_SIZE))}
-            onNext={() => changePage(page.data.offset + PAGE_SIZE)}
+            onPrevious={() => changePage(Math.max(0, page.data.offset - RECALL_PAGE_SIZE))}
+            onNext={() => changePage(page.data.offset + RECALL_PAGE_SIZE)}
           />
         )}
       </section>

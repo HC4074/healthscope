@@ -83,6 +83,7 @@ const mockedCounties = vi.mocked(fetchCountyHealth);
 
 describe("community health explorer", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/community-health");
     mockedCatalog.mockResolvedValue(catalog);
     mockedCounties.mockResolvedValue(countyPage);
   });
@@ -118,6 +119,9 @@ describe("community health explorer", () => {
         expect.objectContaining({ state: "CA", measureId: "ACCESS2", offset: 0 }),
       ),
     );
+    expect(window.location.href).toContain(
+      "/community-health?state=CA&measure=ACCESS2",
+    );
   });
 
   it("requests the next bounded page without changing active filters", async () => {
@@ -132,6 +136,7 @@ describe("community health explorer", () => {
         expect.objectContaining({ state: "AL", measureId: "DIABETES", offset: 25 }),
       ),
     );
+    expect(window.location.search).toBe("?state=AL&measure=DIABETES&page=2");
   });
 
   it("offers a retry when the county request fails", async () => {
@@ -153,11 +158,55 @@ describe("community health explorer", () => {
     render(<App />);
     await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" });
 
-    await user.click(screen.getByRole("button", { name: "Drug recalls" }));
+    await user.click(screen.getByRole("link", { name: "Drug recalls" }));
 
     expect(
       await screen.findByRole("heading", { name: "Follow public drug recalls, straight from FDA." }),
     ).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Diagnosed diabetes among adults" })).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe("/drug-recalls");
+  });
+
+  it("restores a deep-linked community query when browser history changes", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" });
+
+    window.history.pushState(
+      null,
+      "",
+      "/community-health?state=CA&measure=ACCESS2&page=2",
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    await waitFor(() =>
+      expect(mockedCounties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ state: "CA", measureId: "ACCESS2", offset: 25 }),
+      ),
+    );
+    expect(screen.getByLabelText("State")).toHaveValue("CA");
+    expect(screen.getByLabelText("Health measure")).toHaveValue("ACCESS2");
+  });
+
+  it("opens a drug-recall deep link without requesting the CDC catalog", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/drug-recalls?classification=Class+II&page=3",
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Follow public drug recalls, straight from FDA." }),
+    ).toBeVisible();
+    expect(mockedCatalog).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Drug recalls" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Drug recalls" })).toHaveAttribute(
+      "href",
+      "/drug-recalls?classification=Class+II&page=3",
+    );
   });
 });

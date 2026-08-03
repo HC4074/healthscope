@@ -59,6 +59,10 @@ application behavior, and storage can evolve independently.
    terms, and keeps FDA's medical-care warning prominent. Frontend CI
    independently enforces typed builds, lint, and component and API-boundary
    tests.
+5. A typed, dependency-free browser routing boundary maps the explorers to
+   `/community-health` and `/drug-recalls`. Only validated filter and page state
+   is serialized, and `popstate` restores submitted queries without duplicating
+   or fabricating source data.
 
 ## Current deployment boundary
 

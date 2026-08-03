@@ -8,6 +8,10 @@ newest-first FDA enforcement reports with hazard-class filtering, source
 freshness, FDA terms, pagination, and prominent medical-use disclaimers. It
 contains no bundled healthcare dataset.
 
+Both explorers are directly linkable. Submitted filters and result pages are
+stored in `/community-health` or `/drug-recalls` query parameters, so shared
+links and browser back/forward navigation restore the same live-data view.
+
 ## Local development
 
 Run the API on port 8000, then start the Vite development server:

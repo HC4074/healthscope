@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import DrugRecallExplorer from "./DrugRecallExplorer";
 import { fetchDrugRecalls } from "./api";
+import type { RecallRoute } from "./routing";
 import type { DrugRecallPage } from "./types";
 
 vi.mock("./api", () => ({
@@ -52,6 +53,17 @@ const recallPage: DrugRecallPage = {
 };
 
 const mockedRecalls = vi.mocked(fetchDrugRecalls);
+const defaultRoute: RecallRoute = { view: "recalls", offset: 0 };
+
+function renderExplorer(
+  route: RecallRoute = defaultRoute,
+  onNavigate = vi.fn(),
+) {
+  return {
+    onNavigate,
+    ...render(<DrugRecallExplorer route={route} onNavigate={onNavigate} />),
+  };
+}
 
 describe("drug recall explorer", () => {
   beforeEach(() => {
@@ -59,7 +71,7 @@ describe("drug recall explorer", () => {
   });
 
   it("renders current FDA reports, provenance, and medical-use warnings", async () => {
-    render(<DrugRecallExplorer />);
+    renderExplorer();
 
     expect(await screen.findByRole("heading", { name: "Chiesi USA, Inc." })).toBeVisible();
     expect(screen.getAllByText("Class II")).toHaveLength(2);
@@ -77,37 +89,39 @@ describe("drug recall explorer", () => {
 
   it("applies an exact hazard-class filter", async () => {
     const user = userEvent.setup();
-    render(<DrugRecallExplorer />);
+    const { onNavigate } = renderExplorer();
     await screen.findByRole("heading", { name: "Chiesi USA, Inc." });
 
     await user.selectOptions(screen.getByLabelText("Hazard classification"), "Class I");
     await user.click(screen.getByRole("button", { name: /Apply filter/ }));
 
-    await waitFor(() =>
-      expect(mockedRecalls).toHaveBeenLastCalledWith(
-        expect.objectContaining({ classification: "Class I", limit: 10, offset: 0 }),
-      ),
-    );
+    expect(onNavigate).toHaveBeenCalledWith({
+      view: "recalls",
+      classification: "Class I",
+      offset: 0,
+    });
   });
 
   it("requests the next bounded page while preserving the active filter", async () => {
     const user = userEvent.setup();
-    render(<DrugRecallExplorer />);
+    const onNavigate = vi.fn();
+    const route: RecallRoute = { view: "recalls", classification: "Class II", offset: 0 };
+    renderExplorer(route, onNavigate);
     await screen.findByRole("heading", { name: "Chiesi USA, Inc." });
 
     await user.click(screen.getByRole("button", { name: /Next/ }));
 
-    await waitFor(() =>
-      expect(mockedRecalls).toHaveBeenLastCalledWith(
-        expect.objectContaining({ limit: 10, offset: 10 }),
-      ),
-    );
+    expect(onNavigate).toHaveBeenCalledWith({
+      view: "recalls",
+      classification: "Class II",
+      offset: 10,
+    });
   });
 
   it("offers a retry after an FDA request fails", async () => {
     const user = userEvent.setup();
     mockedRecalls.mockRejectedValueOnce(new Error("temporary"));
-    render(<DrugRecallExplorer />);
+    renderExplorer();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Something unexpected interrupted the request.",
@@ -121,7 +135,7 @@ describe("drug recall explorer", () => {
   it("renders an explicit empty state for an official response with no matches", async () => {
     mockedRecalls.mockResolvedValue({ ...recallPage, items: [], total: 0 });
 
-    render(<DrugRecallExplorer />);
+    renderExplorer();
 
     expect(
       await screen.findByRole("heading", { name: "No reports matched this filter." }),
