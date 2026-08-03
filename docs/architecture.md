@@ -63,6 +63,11 @@ application behavior, and storage can evolve independently.
    `/community-health` and `/drug-recalls`. Only validated filter and page state
    is serialized, and `popstate` restores submitted queries without duplicating
    or fabricating source data.
+6. `/overview` is the canonical dashboard landing route. It requests the CMS
+   ingestion health contract, CDC measure catalog, and a one-record FDA page in
+   parallel, isolates failures by source, and links into the detailed explorers.
+   These cards retain their own provenance and freshness; they are not joined
+   across incompatible entities or vintages.
 
 ## Current deployment boundary
 
@@ -77,7 +82,7 @@ provided through environment variables rather than committed configuration.
 Hospital scheduling remains separate from API startup and requires a deployed
 API plus database credentials. Census population and demographic context remains
 a natural complement to the county explorer, but Census data queries now require
-an API key. The clearly disclaimed FDA drug recall view is now backed by the
-typed live API contract. The next unblocked milestone increment is deployment
-readiness or a cross-source dashboard summary; Census enrichment remains queued
-until a Census API key is configured.
+an API key. The clearly disclaimed FDA drug recall view and cross-source landing
+journey are now backed by typed live API contracts. The next unblocked milestone
+increment is provider-ready deployment configuration and release/runbooks;
+Census enrichment remains queued until a Census API key is configured.

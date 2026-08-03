@@ -1,6 +1,7 @@
 import { FormEvent, lazy, type MouseEvent, Suspense, useEffect, useRef, useState } from "react";
 
 import { ApiError, fetchCountyHealth, fetchMeasureCatalog } from "./api";
+import Overview from "./Overview";
 import {
   COMMUNITY_PAGE_SIZE,
   dashboardRouteUrl,
@@ -343,7 +344,7 @@ export default function App() {
     }
     if (route.view === "community") {
       lastCommunityRoute.current = route;
-    } else {
+    } else if (route.view === "recalls") {
       lastRecallRoute.current = route;
     }
   }, [route]);
@@ -414,6 +415,7 @@ export default function App() {
   const communityDestination =
     route.view === "community" ? route : lastCommunityRoute.current;
   const recallDestination = route.view === "recalls" ? route : lastRecallRoute.current;
+  const overviewDestination: DashboardRoute = { view: "overview" };
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -486,9 +488,9 @@ export default function App() {
       <header className="site-header">
         <a
           className="brand"
-          href={dashboardRouteUrl(communityDestination)}
+          href={dashboardRouteUrl(overviewDestination)}
           aria-label="HealthScope home"
-          onClick={(event) => followDashboardLink(event, communityDestination)}
+          onClick={(event) => followDashboardLink(event, overviewDestination)}
         >
           <span className="brand-mark" aria-hidden="true">
             <span />
@@ -497,6 +499,14 @@ export default function App() {
           <span>HealthScope</span>
         </a>
         <nav aria-label="Primary navigation">
+          <a
+            className={route.view === "overview" ? "active-nav" : undefined}
+            href={dashboardRouteUrl(overviewDestination)}
+            aria-current={route.view === "overview" ? "page" : undefined}
+            onClick={(event) => followDashboardLink(event, overviewDestination)}
+          >
+            Overview
+          </a>
           <a
             className={route.view === "community" ? "active-nav" : undefined}
             href={dashboardRouteUrl(communityDestination)}
@@ -518,7 +528,9 @@ export default function App() {
       </header>
 
       <main id="top">
-        {route.view === "community" ? (
+        {route.view === "overview" ? (
+          <Overview onNavigate={navigate} />
+        ) : route.view === "community" ? (
           <>
         <section className="hero" id="explorer">
           <div className="hero-copy">
@@ -632,7 +644,7 @@ export default function App() {
           </a>
           <p>Public healthcare data, made easier to understand.</p>
         </div>
-        <p>Built from official CDC and FDA public data. Not medical advice.</p>
+        <p>Built from official CMS, CDC, and FDA public data. Not medical advice.</p>
       </footer>
     </div>
   );

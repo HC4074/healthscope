@@ -4,6 +4,10 @@ import type { RecallClassification } from "./types";
 export const COMMUNITY_PAGE_SIZE = 25;
 export const RECALL_PAGE_SIZE = 10;
 
+export interface OverviewRoute {
+  view: "overview";
+}
+
 export interface CommunityRoute {
   view: "community";
   state: string;
@@ -17,7 +21,7 @@ export interface RecallRoute {
   offset: number;
 }
 
-export type DashboardRoute = CommunityRoute | RecallRoute;
+export type DashboardRoute = OverviewRoute | CommunityRoute | RecallRoute;
 
 const stateCodes = new Set<string>(STATES.map(([code]) => code));
 const classifications = new Set<RecallClassification>(["Class I", "Class II", "Class III"]);
@@ -38,7 +42,11 @@ function pageOffset(params: URLSearchParams, pageSize: number, maximumOffset?: n
 
 export function readDashboardRoute(location: Pick<Location, "pathname" | "search">): DashboardRoute {
   const params = new URLSearchParams(location.search);
-  if (location.pathname.replace(/\/$/, "") === "/drug-recalls") {
+  const pathname = location.pathname.replace(/\/$/, "") || "/";
+  if (pathname === "/" || pathname === "/overview") {
+    return { view: "overview" };
+  }
+  if (pathname === "/drug-recalls") {
     const classification = params.get("classification");
     return {
       view: "recalls",
@@ -62,6 +70,9 @@ export function readDashboardRoute(location: Pick<Location, "pathname" | "search
 }
 
 export function dashboardRouteUrl(route: DashboardRoute): string {
+  if (route.view === "overview") {
+    return "/overview";
+  }
   const params = new URLSearchParams();
   if (route.view === "recalls") {
     if (route.classification) {

@@ -34,7 +34,10 @@ discovers its measure filters from the live CDC catalog, presents paginated
 county estimates and confidence intervals, and lazily loads newest-first FDA
 recall reports with hazard-class filtering, safety disclaimers, and source
 provenance. Both views expose shareable URLs that preserve submitted filters and
-pagination across reloads and browser history navigation.
+pagination across reloads and browser history navigation. A cross-source
+overview reports CMS ingestion health, CDC catalog breadth, and FDA source
+freshness independently, without joining incompatible entities or reporting
+years.
 The API now covers three live public sources; the first milestone also targets REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md).

@@ -1,12 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchCountyHealth, fetchDrugRecalls, fetchMeasureCatalog } from "./api";
+import {
+  ApiError,
+  fetchCountyHealth,
+  fetchDrugRecalls,
+  fetchHospitalIngestionHealth,
+  fetchMeasureCatalog,
+} from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("community health API client", () => {
+  it("returns structured CMS health details for monitor-compatible 503 responses", async () => {
+    const payload = { healthy: false, reason: "stale", latest_run: null };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchHospitalIngestionHealth()).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/hospitals/ingestion/health",
+      expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
+  });
+
   it("requests the live measure catalog from the configured API boundary", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ items: [], total: 0, source: {} }), {

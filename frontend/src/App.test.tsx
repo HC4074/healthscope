@@ -17,6 +17,7 @@ vi.mock("./api", () => ({
 }));
 
 vi.mock("./PrevalenceChart", () => ({ default: () => <div>County comparison chart</div> }));
+vi.mock("./Overview", () => ({ default: () => <h1>Three trusted sources, one clear starting point.</h1> }));
 vi.mock("./DrugRecallExplorer", () => ({
   default: () => <h1>Follow public drug recalls, straight from FDA.</h1>,
 }));
@@ -165,6 +166,19 @@ describe("community health explorer", () => {
     ).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Diagnosed diabetes among adults" })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe("/drug-recalls");
+  });
+
+  it("opens the cross-source overview from primary navigation", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" });
+
+    await user.click(screen.getByRole("link", { name: "Overview" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Three trusted sources, one clear starting point." }),
+    ).toBeVisible();
+    expect(window.location.pathname).toBe("/overview");
   });
 
   it("restores a deep-linked community query when browser history changes", async () => {

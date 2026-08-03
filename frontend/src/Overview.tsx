@@ -1,0 +1,264 @@
+import { type MouseEvent, useEffect, useState } from "react";
+
+import {
+  ApiError,
+  fetchDrugRecalls,
+  fetchHospitalIngestionHealth,
+  fetchMeasureCatalog,
+} from "./api";
+import { dashboardRouteUrl, type DashboardRoute } from "./routing";
+import type {
+  CommunityHealthMeasureCatalog,
+  DrugRecallPage,
+  HospitalIngestionHealth,
+} from "./types";
+
+type SourceState<T> =
+  | { status: "loading" }
+  | { status: "success"; data: T }
+  | { status: "error"; message: string };
+
+interface OverviewProps {
+  onNavigate: (route: DashboardRoute) => void;
+}
+
+function messageFor(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "This source could not be refreshed. The other sources remain available.";
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
+function followLink(
+  event: MouseEvent<HTMLAnchorElement>,
+  route: DashboardRoute,
+  onNavigate: (route: DashboardRoute) => void,
+) {
+  if (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+  event.preventDefault();
+  onNavigate(route);
+}
+
+function LoadingCard({ source }: { source: string }) {
+  return (
+    <article className="source-overview-card source-overview-loading" aria-busy="true">
+      <p className="source-overview-agency">{source}</p>
+      <div className="skeleton skeleton-title" />
+      <div className="skeleton skeleton-copy" />
+      <span className="sr-only">Loading {source} status</span>
+    </article>
+  );
+}
+
+function ErrorCard({ source, message }: { source: string; message: string }) {
+  return (
+    <article className="source-overview-card source-overview-error">
+      <p className="source-overview-agency">{source}</p>
+      <h2>Source temporarily unavailable</h2>
+      <p>{message}</p>
+      <span className="source-status source-status-warning">Refresh needed</span>
+    </article>
+  );
+}
+
+function CmsCard({ health }: { health: HospitalIngestionHealth }) {
+  const run = health.latest_run;
+  const recordCount = run?.expected_count ?? run?.upserted_count ?? null;
+  const freshness = run?.latest_successful_retrieved_at;
+  const statusText = health.healthy
+    ? health.reason === "ingestion_in_progress"
+      ? "Refreshing"
+      : "Fresh"
+    : health.reason === "no_runs"
+      ? "Awaiting first snapshot"
+      : health.reason === "stale"
+        ? "Stale"
+        : "Latest run failed";
+
+  return (
+    <article className="source-overview-card">
+      <div className="source-overview-heading">
+        <p className="source-overview-agency">Centers for Medicare & Medicaid Services</p>
+        <span className={`source-status ${health.healthy ? "" : "source-status-warning"}`}>
+          {statusText}
+        </span>
+      </div>
+      <h2>Hospital coverage</h2>
+      <strong className="source-overview-metric">
+        {recordCount === null ? "Not available" : formatNumber(recordCount)}
+      </strong>
+      <p>
+        {recordCount === null
+          ? "No verified CMS hospital snapshot has been completed yet."
+          : `Medicare-registered hospital records in the latest ingestion run${
+              freshness ? `, retrieved ${formatDate(freshness)}` : ""
+            }.`}
+      </p>
+      <a
+        className="source-overview-link"
+        href="https://data.cms.gov/provider-data/dataset/xubh-q36u"
+      >
+        View the official CMS dataset <span aria-hidden="true">↗</span>
+      </a>
+    </article>
+  );
+}
+
+function CdcCard({ catalog, onNavigate }: { catalog: CommunityHealthMeasureCatalog } & OverviewProps) {
+  const latestYear = Math.max(...catalog.items.map((measure) => measure.latest_year));
+  const route: DashboardRoute = { view: "community", state: "AL", offset: 0 };
+  return (
+    <article className="source-overview-card">
+      <div className="source-overview-heading">
+        <p className="source-overview-agency">Centers for Disease Control and Prevention</p>
+        <span className="source-status">Live catalog</span>
+      </div>
+      <h2>Community health</h2>
+      <strong className="source-overview-metric">{formatNumber(catalog.total)} measures</strong>
+      <p>
+        Age-adjusted county estimates from CDC PLACES, with the newest available measure year of {" "}
+        {latestYear}.
+      </p>
+      <a
+        className="source-overview-link"
+        href={dashboardRouteUrl(route)}
+        onClick={(event) => followLink(event, route, onNavigate)}
+      >
+        Explore county health <span aria-hidden="true">→</span>
+      </a>
+    </article>
+  );
+}
+
+function FdaCard({ recalls, onNavigate }: { recalls: DrugRecallPage } & OverviewProps) {
+  const route: DashboardRoute = { view: "recalls", offset: 0 };
+  return (
+    <article className="source-overview-card">
+      <div className="source-overview-heading">
+        <p className="source-overview-agency">U.S. Food and Drug Administration</p>
+        <span className="source-status">Updated {formatDate(recalls.source.last_updated)}</span>
+      </div>
+      <h2>Drug recalls</h2>
+      <strong className="source-overview-metric">{formatNumber(recalls.total)} reports</strong>
+      <p>
+        Newest-first FDA enforcement reports. Recall classifications describe hazard severity and
+        are not medical advice.
+      </p>
+      <a
+        className="source-overview-link"
+        href={dashboardRouteUrl(route)}
+        onClick={(event) => followLink(event, route, onNavigate)}
+      >
+        Review drug recalls <span aria-hidden="true">→</span>
+      </a>
+    </article>
+  );
+}
+
+export default function Overview({ onNavigate }: OverviewProps) {
+  const [attempt, setAttempt] = useState(0);
+  const [cms, setCms] = useState<SourceState<HospitalIngestionHealth>>({ status: "loading" });
+  const [cdc, setCdc] = useState<SourceState<CommunityHealthMeasureCatalog>>({ status: "loading" });
+  const [fda, setFda] = useState<SourceState<DrugRecallPage>>({ status: "loading" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchHospitalIngestionHealth(controller.signal)
+      .then((data) => setCms({ status: "success", data }))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setCms({ status: "error", message: messageFor(error) });
+        }
+      });
+    void fetchMeasureCatalog(controller.signal)
+      .then((data) => setCdc({ status: "success", data }))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setCdc({ status: "error", message: messageFor(error) });
+        }
+      });
+    void fetchDrugRecalls({ limit: 1, offset: 0, signal: controller.signal })
+      .then((data) => setFda({ status: "success", data }))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setFda({ status: "error", message: messageFor(error) });
+        }
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  function retryAll() {
+    setCms({ status: "loading" });
+    setCdc({ status: "loading" });
+    setFda({ status: "loading" });
+    setAttempt((value) => value + 1);
+  }
+
+  return (
+    <>
+      <section className="hero overview-hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Public healthcare intelligence</p>
+          <h1>
+            Three trusted sources,
+            <span> one clear starting point.</span>
+          </h1>
+          <p className="hero-description">
+            Monitor CMS hospital data, explore CDC county health, and review FDA drug recalls from
+            independent live public sources.
+          </p>
+        </div>
+        <aside className="overview-boundary">
+          <strong>Read each signal in its own context.</strong>
+          <span>HealthScope does not merge unrelated populations, entities, or reporting years.</span>
+        </aside>
+      </section>
+
+      <section className="content-wrap overview-content" aria-live="polite">
+        <div className="overview-section-heading">
+          <div>
+            <p className="eyebrow">Source pulse</p>
+            <h2>What is available now</h2>
+          </div>
+          <button className="text-button" type="button" onClick={retryAll}>
+            Refresh all sources
+          </button>
+        </div>
+        <div className="source-overview-grid">
+          {cms.status === "loading" && <LoadingCard source="CMS" />}
+          {cms.status === "error" && <ErrorCard source="CMS" message={cms.message} />}
+          {cms.status === "success" && <CmsCard health={cms.data} />}
+
+          {cdc.status === "loading" && <LoadingCard source="CDC" />}
+          {cdc.status === "error" && <ErrorCard source="CDC" message={cdc.message} />}
+          {cdc.status === "success" && <CdcCard catalog={cdc.data} onNavigate={onNavigate} />}
+
+          {fda.status === "loading" && <LoadingCard source="FDA" />}
+          {fda.status === "error" && <ErrorCard source="FDA" message={fda.message} />}
+          {fda.status === "success" && <FdaCard recalls={fda.data} onNavigate={onNavigate} />}
+        </div>
+      </section>
+    </>
+  );
+}

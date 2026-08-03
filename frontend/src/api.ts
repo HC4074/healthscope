@@ -2,6 +2,7 @@ import type {
   CommunityHealthMeasureCatalog,
   CountyHealthPage,
   DrugRecallPage,
+  HospitalIngestionHealth,
   RecallClassification,
 } from "./types";
 
@@ -14,7 +15,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function request<T>(
+  path: string,
+  signal?: AbortSignal,
+  acceptedStatuses: readonly number[] = [],
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${configuredBaseUrl}${path}`, {
@@ -28,7 +33,7 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
     throw new ApiError("HealthScope could not reach the data service.", 0);
   }
 
-  if (!response.ok) {
+  if (!response.ok && !acceptedStatuses.includes(response.status)) {
     let detail = "The data service returned an unexpected response.";
     try {
       const payload: unknown = await response.json();
@@ -47,6 +52,10 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+export function fetchHospitalIngestionHealth(signal?: AbortSignal): Promise<HospitalIngestionHealth> {
+  return request("/api/v1/hospitals/ingestion/health", signal, [503]);
 }
 
 export function fetchMeasureCatalog(signal?: AbortSignal): Promise<CommunityHealthMeasureCatalog> {

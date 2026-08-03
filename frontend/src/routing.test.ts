@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import { dashboardRouteUrl, readDashboardRoute } from "./routing";
 
 describe("dashboard routing", () => {
+  it("canonicalizes the root landing page to the overview route", () => {
+    expect(readDashboardRoute({ pathname: "/", search: "?ignored=true" })).toEqual({
+      view: "overview",
+    });
+    expect(dashboardRouteUrl({ view: "overview" })).toBe("/overview");
+  });
+
   it("reads and writes community-health filters and pagination", () => {
     const route = readDashboardRoute({
       pathname: "/community-health",

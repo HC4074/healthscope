@@ -8,6 +8,12 @@ newest-first FDA enforcement reports with hazard-class filtering, source
 freshness, FDA terms, pagination, and prominent medical-use disclaimers. It
 contains no bundled healthcare dataset.
 
+`/overview` is the product landing page. It loads the CMS ingestion health,
+CDC measure catalog, and a bounded FDA recall query independently, so one
+unavailable source does not hide the others. The cards intentionally present
+separate source status and freshness rather than combining incompatible
+populations, entities, or reporting years into a synthetic KPI.
+
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared
 links and browser back/forward navigation restore the same live-data view.
