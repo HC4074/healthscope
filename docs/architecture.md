@@ -85,6 +85,13 @@ defines first ingestion, external daily scheduling, monitoring, backups, and a
 schema-safe rollback boundary; actual infrastructure provisioning and TLS
 termination remain the hosting provider's responsibility.
 
+Deployment CI also boots the production images against an ephemeral, empty
+PostgreSQL instance. It verifies migration and dependency ordering, private
+service networking, Nginx/API routing, database-loss readiness behavior,
+database recovery, and fail-closed migrations before a release can advance.
+This validates the provider-neutral runtime contract without persisting test
+healthcare data.
+
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed

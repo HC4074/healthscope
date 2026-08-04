@@ -4,18 +4,22 @@ on:
   pull_request:
     paths:
       - "compose.production.yaml"
+      - "compose.release-test.yaml"
       - ".env.production.example"
       - "backend/**"
       - "frontend/**"
+      - "scripts/test-production-release.sh"
       - "docs/deployment.md"
       - ".github/workflows/deployment-ci.yml"
   push:
     branches: [main]
     paths:
       - "compose.production.yaml"
+      - "compose.release-test.yaml"
       - ".env.production.example"
       - "backend/**"
       - "frontend/**"
+      - "scripts/test-production-release.sh"
       - "docs/deployment.md"
       - ".github/workflows/deployment-ci.yml"
 
@@ -37,3 +41,6 @@ jobs:
 
       - name: Build production images
         run: docker compose -f compose.production.yaml build
+
+      - name: Exercise production release contract
+        run: bash scripts/test-production-release.sh

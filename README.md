@@ -43,7 +43,9 @@ dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md). A provider-neutral
 [production deployment runbook](docs/deployment.md) defines the container
 release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
-and rollback contract.
+and rollback contract. Deployment CI boots those production images with an
+ephemeral empty PostgreSQL instance and exercises routing, migrations,
+readiness failure, and recovery behavior.
 
 ## Quick start
 

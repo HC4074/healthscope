@@ -65,6 +65,26 @@ curl --fail --show-error https://healthscope.example.com/overview
 `/api/v1/health` proves the process is accepting requests. `/api/v1/ready`
 returns 503 when PostgreSQL cannot be reached and is the routing health check.
 
+## Verify the release contract
+
+Deployment CI builds the production images and runs the production Compose file
+with `compose.release-test.yaml`. The overlay supplies an ephemeral PostgreSQL
+instance containing only empty migrated tables; it never loads or fabricates
+healthcare records. Run the same check from a Docker-equipped development host:
+
+```bash
+cp .env.production.example .env.production
+docker compose -f compose.production.yaml build
+bash scripts/test-production-release.sh
+```
+
+The check verifies migration ordering, private API/database networking,
+same-origin Nginx routing, production liveness and readiness responses, the SPA
+fallback, and the current Alembic head. It then stops PostgreSQL and requires
+readiness to return its safe 503 contract, restarts PostgreSQL and requires
+recovery, and proves migrations fail closed against an unreachable database.
+The script always removes its containers and ephemeral database on exit.
+
 ## Initialize and schedule CMS data
 
 The ingestion-health probe is expected to return 503 before the first complete
