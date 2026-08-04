@@ -45,7 +45,9 @@ dashboard visualizations, and architecture documentation. See the current
 release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
 and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
-readiness failure, and recovery behavior.
+readiness failure, and recovery behavior. Successful `main` builds then publish
+full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
+SBOM attestations.
 
 ## Quick start
 

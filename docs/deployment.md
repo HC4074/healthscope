@@ -19,6 +19,10 @@ application host.
   provider's equivalent secret injection.
 - Pin deployments to a reviewed commit or immutable image digest. Do not deploy
   a moving `latest` tag.
+- Successful `main` builds publish separate API and frontend images to GHCR with
+  a `sha-<full-commit-sha>` tag. Publishing starts only after the container-level
+  production release checks pass. Each digest has signed GitHub build-provenance
+  and SPDX SBOM attestations.
 
 ## Secret and configuration inventory
 
@@ -30,7 +34,7 @@ application host.
 | `HEALTHSCOPE_FDA_API_KEY` | Optional secret | Raises the openFDA request quota. |
 | CMS, CDC, and FDA URL/dataset settings | Versioned defaults | Official public source identities and request policy. Change only through a reviewed release. |
 | `HEALTHSCOPE_HTTP_PORT` | Optional host setting | Published HTTP port; defaults to `80`. |
-| `HEALTHSCOPE_API_IMAGE`, `HEALTHSCOPE_FRONTEND_IMAGE` | Optional host settings | Stable image names/tags when a registry supplies prebuilt images. |
+| `HEALTHSCOPE_API_IMAGE`, `HEALTHSCOPE_FRONTEND_IMAGE` | Required for prebuilt deployment | Full-SHA GHCR tags or recorded immutable digests from the same release. |
 
 Start from [`.env.production.example`](../.env.production.example). The real
 `.env.production` file is ignored by Git. Restrict it to the deployment account
@@ -38,13 +42,55 @@ and prefer provider-managed secret injection when available.
 
 ## Deploy a release
 
+Choose the exact reviewed commit and configure both images from that same
+release. A full SHA tag is immutable by convention; resolve and record each
+registry digest before deployment for the strongest pin:
+
+After the first successful publication, choose the package access policy in
+GitHub for both `healthscope-api` and `healthscope-frontend`. Public packages can
+be pulled anonymously. For private packages, store a classic personal access
+token with only `read:packages` in the hosting provider's secret store and log
+the deployment host in without exposing that token to the application:
+
+```bash
+printf '%s' "${GHCR_READ_TOKEN}" | \
+  docker login ghcr.io --username HC4074 --password-stdin
+```
+
+Do not place `GHCR_READ_TOKEN` in `.env.production`; it is a host registry
+credential, not application configuration.
+
+```bash
+release_sha=replace-with-full-40-character-commit-sha
+export HEALTHSCOPE_API_IMAGE="ghcr.io/hc4074/healthscope-api:sha-${release_sha}"
+export HEALTHSCOPE_FRONTEND_IMAGE="ghcr.io/hc4074/healthscope-frontend:sha-${release_sha}"
+docker pull "${HEALTHSCOPE_API_IMAGE}"
+docker pull "${HEALTHSCOPE_FRONTEND_IMAGE}"
+docker inspect --format='{{index .RepoDigests 0}}' "${HEALTHSCOPE_API_IMAGE}"
+docker inspect --format='{{index .RepoDigests 0}}' "${HEALTHSCOPE_FRONTEND_IMAGE}"
+```
+
+Verify that each artifact was built by this repository. Repeat both commands
+with `healthscope-frontend` for the dashboard image:
+
+```bash
+gh attestation verify \
+  "oci://ghcr.io/hc4074/healthscope-api:sha-${release_sha}" \
+  --repo HC4074/healthscope
+gh attestation verify \
+  "oci://ghcr.io/hc4074/healthscope-api:sha-${release_sha}" \
+  --repo HC4074/healthscope \
+  --predicate-type https://spdx.dev/Document/v2.3
+```
+
 From a clean checkout at the reviewed commit:
 
 ```bash
 cp .env.production.example .env.production
-# Edit .env.production with the managed database URL and optional FDA key.
+# Edit .env.production with the managed database URL, both release image tags,
+# and optional FDA key.
 docker compose -f compose.production.yaml config --quiet
-docker compose -f compose.production.yaml build --pull
+docker compose -f compose.production.yaml pull
 docker compose -f compose.production.yaml up -d
 docker compose -f compose.production.yaml ps
 ```
@@ -70,7 +116,8 @@ returns 503 when PostgreSQL cannot be reached and is the routing health check.
 Deployment CI builds the production images and runs the production Compose file
 with `compose.release-test.yaml`. The overlay supplies an ephemeral PostgreSQL
 instance containing only empty migrated tables; it never loads or fabricates
-healthcare records. Run the same check from a Docker-equipped development host:
+healthcare records. Only a successful push build advances to GHCR publication.
+Run the same check from a Docker-equipped development host:
 
 ```bash
 cp .env.production.example .env.production
@@ -128,8 +175,8 @@ outside API startup so restarts never trigger unscheduled data writes.
 1. Capture current container logs and the failed release identifier.
 2. Confirm the last known-good application schema is compatible with the current
    database schema.
-3. Redeploy the last known-good commit or immutable image digest and repeat the
-   liveness/readiness checks.
+3. Redeploy both last known-good images from the same commit, preferably pinned
+   by their recorded immutable digests, and repeat the liveness/readiness checks.
 4. Do not run `alembic downgrade` automatically. Several downgrades remove
    persisted data. If the schema itself must be reversed, stop writes, take a
    fresh database snapshot, review the exact downgrade SQL, and prefer restoring
