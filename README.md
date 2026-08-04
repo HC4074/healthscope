@@ -40,7 +40,10 @@ freshness independently, without joining incompatible entities or reporting
 years.
 The API now covers three live public sources; the first milestone also targets REST APIs,
 dashboard visualizations, and architecture documentation. See the current
-[architecture notes](docs/architecture.md).
+[architecture notes](docs/architecture.md). A provider-neutral
+[production deployment runbook](docs/deployment.md) defines the container
+release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
+and rollback contract.
 
 ## Quick start
 
@@ -53,6 +56,9 @@ docker compose up --build
 Then open `http://localhost:8000/docs` or check
 `http://localhost:8000/api/v1/health`. The dashboard is available at
 `http://localhost:3000`.
+
+Production uses `compose.production.yaml` with a managed PostgreSQL database;
+it intentionally does not embed the local development database or credentials.
 
 ## Data policy
 

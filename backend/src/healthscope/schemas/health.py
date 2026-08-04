@@ -14,3 +14,12 @@ class HealthResponse(BaseModel):
     service: str
     version: str
     environment: str
+
+
+class ReadinessResponse(BaseModel):
+    """Database-backed readiness state for traffic routing."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: Literal["ready", "not_ready"]
+    database: Literal["available", "unavailable"]

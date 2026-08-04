@@ -14,6 +14,11 @@ uvicorn healthscope.main:app --reload
 The API is available at `http://localhost:8000`, with OpenAPI documentation at
 `/docs` and a health probe at `/api/v1/health`.
 
+`GET /api/v1/ready` additionally verifies database connectivity. It returns
+`503` without exposing connection details when PostgreSQL is unavailable and is
+the correct container-orchestrator traffic readiness probe. Liveness remains
+separate so operators can distinguish a running process from a database outage.
+
 ## Live data endpoints
 
 `GET /api/v1/hospitals` returns a validated, paginated view of the current CMS

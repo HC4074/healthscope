@@ -77,6 +77,14 @@ readiness, the dashboard waits for the API health probe, and migrations run
 before Uvicorn starts. Runtime secrets and production connection details must be
 provided through environment variables rather than committed configuration.
 
+The provider-neutral production Compose contract replaces the local database
+with managed PostgreSQL, exposes only Nginx, runs migrations as a required
+one-shot service, and gates traffic on a database-backed API readiness probe.
+The separate liveness probe does not query dependencies. The deployment runbook
+defines first ingestion, external daily scheduling, monitoring, backups, and a
+schema-safe rollback boundary; actual infrastructure provisioning and TLS
+termination remain the hosting provider's responsibility.
+
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed
@@ -84,5 +92,7 @@ API plus database credentials. Census population and demographic context remains
 a natural complement to the county explorer, but Census data queries now require
 an API key. The clearly disclaimed FDA drug recall view and cross-source landing
 journey are now backed by typed live API contracts. The next unblocked milestone
-increment is provider-ready deployment configuration and release/runbooks;
-Census enrichment remains queued until a Census API key is configured.
+increment is applying the production contract to a selected host, managed
+PostgreSQL instance, scheduler, and monitor. That provisioning remains blocked
+until a provider and credentials are supplied; Census enrichment remains queued
+until a Census API key is configured.

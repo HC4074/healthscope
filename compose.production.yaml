@@ -1,0 +1,61 @@
+name: healthscope-production
+
+x-api-service: &api-service
+  image: ${HEALTHSCOPE_API_IMAGE:-healthscope-api:production}
+  build:
+    context: ./backend
+  env_file:
+    - ${HEALTHSCOPE_ENV_FILE:-.env.production}
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  migrate:
+    <<: *api-service
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    <<: *api-service
+    command: ["uvicorn", "healthscope.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/ready')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    image: ${HEALTHSCOPE_FRONTEND_IMAGE:-healthscope-frontend:production}
+    build:
+      context: ./frontend
+    ports:
+      - "${HEALTHSCOPE_HTTP_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  ingest:
+    <<: *api-service
+    command: ["healthscope-ingest-hospitals"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    profiles: ["operations"]

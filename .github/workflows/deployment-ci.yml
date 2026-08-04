@@ -1,0 +1,39 @@
+name: Deployment CI
+
+on:
+  pull_request:
+    paths:
+      - "compose.production.yaml"
+      - ".env.production.example"
+      - "backend/**"
+      - "frontend/**"
+      - "docs/deployment.md"
+      - ".github/workflows/deployment-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "compose.production.yaml"
+      - ".env.production.example"
+      - "backend/**"
+      - "frontend/**"
+      - "docs/deployment.md"
+      - ".github/workflows/deployment-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  containers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate production configuration
+        run: |
+          cp .env.production.example .env.production
+          docker compose -f compose.production.yaml config --quiet
+
+      - name: Build production images
+        run: docker compose -f compose.production.yaml build

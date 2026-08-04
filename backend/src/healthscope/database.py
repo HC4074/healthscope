@@ -39,6 +39,9 @@ def get_engine() -> Engine:
     return create_database_engine(get_settings().database_url)
 
 
+EngineDependency = Annotated[Engine, Depends(get_engine)]
+
+
 @lru_cache
 def get_session_factory() -> sessionmaker[Session]:
     """Return the process-wide session factory."""

@@ -15,6 +15,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # Test and coverage output
 .coverage
@@ -30,4 +31,3 @@ Thumbs.db
 # Local data and logs
 data/
 *.log
-
