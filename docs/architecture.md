@@ -16,7 +16,8 @@ application behavior, and storage can evolve independently.
    labels, categories, latest years, and county coverage without hard-coding
    source metadata. A separate FDA client retrieves newest-first drug recall
    enforcement reports from openFDA, validates hazard classes, dates, ordering,
-   pagination, and source metadata, and preserves FDA's medical-use disclaimer.
+   pagination, and source metadata, normalizes official blank/`N/A` optional
+   fields to null, and preserves FDA's medical-use disclaimer.
    No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
@@ -85,10 +86,20 @@ defines first ingestion, external daily scheduling, monitoring, backups, and a
 schema-safe rollback boundary; actual infrastructure provisioning and TLS
 termination remain the hosting provider's responsibility.
 
+Nginx assigns an opaque request ID at the public boundary and forwards it to the
+API. The API returns that identifier in `X-Request-ID` and emits a structured
+completion event containing the request method, path, status, duration,
+environment, and service version. Query strings and response bodies are not
+logged. Nginx uses the same identifier in its own query-free structured request
+event, while packaged Uvicorn commands disable the duplicate default access
+line. This supplies cross-layer correlation while keeping public-data filter
+values and any future sensitive parameters out of access events.
+
 Deployment CI also boots the production images against an ephemeral, empty
 PostgreSQL instance. It verifies migration and dependency ordering, private
 service networking, Nginx/API routing, database-loss readiness behavior,
-database recovery, and fail-closed migrations before a release can advance.
+request-ID propagation, database recovery, and fail-closed migrations before a
+release can advance.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,

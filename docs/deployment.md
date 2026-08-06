@@ -163,6 +163,11 @@ outside API startup so restarts never trigger unscheduled data writes.
   readiness.
 - Poll `/api/v1/hospitals/ingestion/health`; alert on 503. The default 26-hour
   freshness threshold allows a daily job a two-hour delay window.
+- Capture the `X-Request-ID` response header in monitor alerts and use it to
+  locate the matching `http_request_completed` API log event. Those structured
+  events include method, path, status, duration, environment, and release
+  version. The Nginx `proxy_request_completed` event uses the same ID. Both
+  deliberately omit query strings and response bodies.
 - Alert on scheduler failures and keep the structured ingestion output with the
   release identifier.
 - Enable managed PostgreSQL automated backups and point-in-time recovery. Test a

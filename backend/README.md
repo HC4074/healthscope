@@ -8,7 +8,7 @@ The FastAPI service that powers HealthScope.
 python -m venv .venv
 python -m pip install -e ".[dev]"
 alembic upgrade head
-uvicorn healthscope.main:app --reload
+uvicorn healthscope.main:app --reload --no-access-log
 ```
 
 The API is available at `http://localhost:8000`, with OpenAPI documentation at
@@ -18,6 +18,16 @@ The API is available at `http://localhost:8000`, with OpenAPI documentation at
 `503` without exposing connection details when PostgreSQL is unavailable and is
 the correct container-orchestrator traffic readiness probe. Liveness remains
 separate so operators can distinguish a running process from a database outage.
+
+Every API response includes `X-Request-ID`. The production Nginx proxy assigns
+a fresh 32-character request ID before forwarding the request; direct API calls
+may supply a safe 1-128 character identifier using letters, digits, `.`, `_`,
+`:`, or `-`. Unsafe values are replaced with a UUID. The API logs one JSON
+completion event with the same ID, method, path, status, duration, environment,
+and service version. Query strings are deliberately omitted so filters, future
+credentials, and other request parameters do not enter access logs.
+Packaged and Compose launch commands disable Uvicorn's duplicate access line,
+which otherwise includes the query string.
 
 ## Live data endpoints
 
@@ -61,6 +71,8 @@ exact health-hazard class filter, and `limit` (1-100, default 25) plus `offset`
 disclaimer, terms, license, and retrieval timestamp. Recall reports are public
 context only: FDA explicitly warns against using openFDA for medical-care
 decisions, public alerts, or recall lifecycle tracking.
+Optional legacy fields that openFDA reports as blank or `N/A` are normalized to
+`null`, including foreign recalling-firm state values.
 
 The FDA base URL and 10-second request timeout can be changed with
 `HEALTHSCOPE_FDA_API_BASE_URL` and `HEALTHSCOPE_FDA_REQUEST_TIMEOUT_SECONDS`.

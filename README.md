@@ -47,7 +47,10 @@ and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
 readiness failure, and recovery behavior. Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
-SBOM attestations.
+SBOM attestations. Production API responses include a validated
+`X-Request-ID`, and the API emits query-free structured completion events so
+operators can correlate monitor failures with container logs without recording
+request parameters.
 
 ## Quick start
 
