@@ -123,6 +123,21 @@ not PostgreSQL, or it retains a documented placeholder/default database host or
 password. Development and test environments keep SQLite support for isolated
 tests. See the production deployment runbook for the managed-database contract.
 
+## Public-source compatibility check
+
+Run the bounded, read-only compatibility check for every current official data
+source without requiring a database:
+
+```bash
+healthscope-check-public-sources
+```
+
+The command retrieves one CMS hospital, the current CDC PLACES measure catalog,
+and one newest FDA drug recall through the same typed clients used by the API.
+It emits a JSON summary and exits nonzero on transport, validation, or empty-CMS
+failures. GitHub Actions runs this check daily and also supports manual dispatch;
+it never persists the retrieved records.
+
 ## Hospital snapshot ingestion
 
 After applying migrations, run the explicit one-shot command to retrieve every

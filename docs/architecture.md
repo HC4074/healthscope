@@ -111,6 +111,12 @@ signed build provenance, and signed SPDX SBOM attestations bind each registry
 digest back to the exact workflow and repository revision; production can pull
 reviewed artifacts without rebuilding them on the host.
 
+A separate scheduled compatibility workflow runs a bounded, read-only sample
+through each production source client: one CMS hospital, the complete small CDC
+measure catalog, and one newest FDA recall. It writes no database records and is
+not a substitute for deployed ingestion monitoring; it detects upstream schema
+or validation drift even while production provisioning remains credential-gated.
+
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed

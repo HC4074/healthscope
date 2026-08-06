@@ -52,7 +52,9 @@ migration, or ingestion if debug is enabled, PostgreSQL is not configured, or a
 documented placeholder/default database credential remains. Production API
 responses include a validated `X-Request-ID`, and the API emits query-free
 structured completion events so operators can correlate monitor failures with
-container logs without recording request parameters.
+container logs without recording request parameters. A scheduled compatibility
+smoke check queries bounded live samples from all three official sources each
+day, catching upstream schema drift without writing healthcare records.
 
 ## Quick start
 

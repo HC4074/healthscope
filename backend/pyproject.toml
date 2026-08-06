@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 healthscope-ingest-hospitals = "healthscope.cli:main"
+healthscope-check-public-sources = "healthscope.public_data_smoke:main"
 
 [project.optional-dependencies]
 dev = [

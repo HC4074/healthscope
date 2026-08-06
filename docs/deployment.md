@@ -173,6 +173,10 @@ outside API startup so restarts never trigger unscheduled data writes.
   readiness.
 - Poll `/api/v1/hospitals/ingestion/health`; alert on 503. The default 26-hour
   freshness threshold allows a daily job a two-hour delay window.
+- Keep the scheduled `Public Data Smoke` GitHub Actions workflow enabled. It
+  checks bounded live CMS, CDC, and FDA responses daily without writing records,
+  providing early warning of upstream contract drift before deployment or
+  between application releases.
 - Capture the `X-Request-ID` response header in monitor alerts and use it to
   locate the matching `http_request_completed` API log event. Those structured
   events include method, path, status, duration, environment, and release
