@@ -117,6 +117,12 @@ alembic upgrade head
 Docker Compose supplies the container database URL and applies pending
 migrations automatically when the API container starts.
 
+When `HEALTHSCOPE_ENVIRONMENT=production`, settings validation fails before API
+startup, migration, or ingestion if debug mode is enabled, the database URL is
+not PostgreSQL, or it retains a documented placeholder/default database host or
+password. Development and test environments keep SQLite support for isolated
+tests. See the production deployment runbook for the managed-database contract.
+
 ## Hospital snapshot ingestion
 
 After applying migrations, run the explicit one-shot command to retrieve every

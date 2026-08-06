@@ -12,6 +12,9 @@ application host.
   same-origin `/api` requests to it.
 - Use a managed PostgreSQL connection that requires TLS. Never reuse the local
   `healthscope-local-only` password.
+- Production settings fail before startup, migration, or ingestion when debug is
+  enabled, the database URL is not PostgreSQL, or a documented placeholder or
+  default database credential remains.
 - Apply Alembic migrations before the API accepts traffic. The API depends on a
   successful one-shot `migrate` container.
 - Persist no secrets in Git, container images, command history, or scheduler
@@ -99,6 +102,12 @@ docker compose -f compose.production.yaml ps
 the API readiness check. A migration failure leaves the new API unavailable
 instead of serving against an older schema.
 
+The settings guard is intentionally tied to
+`HEALTHSCOPE_ENVIRONMENT=production`, so SQLite remains available for isolated
+tests while every production entry point shares the stricter PostgreSQL and
+placeholder checks. A rejected setting is reported on standard error before a
+database connection is attempted.
+
 Verify process liveness, database readiness, and the browser entry point through
 the public TLS URL:
 
@@ -125,12 +134,13 @@ docker compose -f compose.production.yaml build
 bash scripts/test-production-release.sh
 ```
 
-The check verifies migration ordering, private API/database networking,
-same-origin Nginx routing, production liveness and readiness responses, the SPA
-fallback, and the current Alembic head. It then stops PostgreSQL and requires
-readiness to return its safe 503 contract, restarts PostgreSQL and requires
-recovery, and proves migrations fail closed against an unreachable database.
-The script always removes its containers and ephemeral database on exit.
+The check verifies unsafe production settings fail before startup, migration
+ordering, private API/database networking, same-origin Nginx routing,
+production liveness and readiness responses, the SPA fallback, and the current
+Alembic head. It then stops PostgreSQL and requires readiness to return its safe
+503 contract, restarts PostgreSQL and requires recovery, and proves migrations
+fail closed against an unreachable database. The script always removes its
+containers and ephemeral database on exit.
 
 ## Initialize and schedule CMS data
 

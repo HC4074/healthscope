@@ -65,6 +65,23 @@ assert not services["database"].get("ports")
 assert str(services["frontend"]["ports"][0]["published"]) == sys.argv[2]
 PY
 
+expect_configuration_failure() {
+  local name=$1
+  shift
+
+  if "${compose[@]}" run --rm --no-deps "$@" api \
+    python -c 'import healthscope.main' >"${response_dir}/${name}.log" 2>&1; then
+    echo "Production container accepted unsafe ${name} configuration." >&2
+    return 1
+  fi
+}
+
+expect_configuration_failure "debug" -e HEALTHSCOPE_DEBUG=true
+expect_configuration_failure "database-backend" -e HEALTHSCOPE_DATABASE_URL=sqlite:///healthscope.db
+expect_configuration_failure \
+  "database-placeholder" \
+  -e HEALTHSCOPE_DATABASE_URL=postgresql+psycopg://healthscope:replace-with-a-secret@db.internal/healthscope
+
 "${compose[@]}" up --detach --wait --wait-timeout 180 database api frontend
 
 curl --fail --silent --show-error \

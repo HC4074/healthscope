@@ -1,9 +1,24 @@
 """Application configuration loaded from environment variables."""
 
 from functools import lru_cache
+from typing import Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
+
+UNSAFE_PRODUCTION_DATABASE_PASSWORDS = frozenset(
+    {
+        "changeme",
+        "healthscope-local-only",
+        "password",
+        "placeholder",
+        "postgres",
+        "replace-with-a-secret",
+        "secret",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -13,6 +28,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_prefix="HEALTHSCOPE_",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     app_name: str = "HealthScope"
@@ -38,6 +54,42 @@ class Settings(BaseSettings):
     fda_api_base_url: str = Field(default="https://api.fda.gov", pattern=r"^https://")
     fda_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
     fda_api_key: SecretStr | None = None
+
+    @model_validator(mode="after")
+    def validate_production_safety(self) -> Self:
+        """Reject unsafe production-only settings before any work starts."""
+
+        if self.environment != "production":
+            return self
+        if self.debug:
+            raise ValueError("HEALTHSCOPE_DEBUG must be false in production")
+
+        try:
+            database_url = make_url(self.database_url)
+        except ArgumentError as exc:
+            raise ValueError(
+                "HEALTHSCOPE_DATABASE_URL must be a valid SQLAlchemy database URL"
+            ) from exc
+
+        if database_url.get_backend_name() != "postgresql":
+            raise ValueError("HEALTHSCOPE_DATABASE_URL must use PostgreSQL in production")
+
+        password = database_url.password
+        if (
+            password is not None
+            and password.strip().lower() in UNSAFE_PRODUCTION_DATABASE_PASSWORDS
+        ):
+            raise ValueError(
+                "HEALTHSCOPE_DATABASE_URL contains an unsafe placeholder or default password"
+            )
+
+        host = database_url.host
+        if host is not None and (
+            host.lower() == "example.com" or host.lower().endswith(".example.com")
+        ):
+            raise ValueError("HEALTHSCOPE_DATABASE_URL contains a placeholder database host")
+
+        return self
 
 
 @lru_cache

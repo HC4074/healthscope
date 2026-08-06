@@ -81,6 +81,10 @@ provided through environment variables rather than committed configuration.
 The provider-neutral production Compose contract replaces the local database
 with managed PostgreSQL, exposes only Nginx, runs migrations as a required
 one-shot service, and gates traffic on a database-backed API readiness probe.
+Shared settings validation makes API startup, migrations, and ingestion fail
+before connecting when production enables debug mode, selects a non-PostgreSQL
+database, or retains a documented placeholder/default database credential.
+Non-production SQLite support remains available for isolated tests.
 The separate liveness probe does not query dependencies. The deployment runbook
 defines first ingestion, external daily scheduling, monitoring, backups, and a
 schema-safe rollback boundary; actual infrastructure provisioning and TLS
@@ -96,10 +100,10 @@ line. This supplies cross-layer correlation while keeping public-data filter
 values and any future sensitive parameters out of access events.
 
 Deployment CI also boots the production images against an ephemeral, empty
-PostgreSQL instance. It verifies migration and dependency ordering, private
-service networking, Nginx/API routing, database-loss readiness behavior,
-request-ID propagation, database recovery, and fail-closed migrations before a
-release can advance.
+PostgreSQL instance. It verifies unsafe settings fail before startup, migration
+and dependency ordering, private service networking, Nginx/API routing,
+database-loss readiness behavior, request-ID propagation, database recovery,
+and fail-closed migrations before a release can advance.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,
