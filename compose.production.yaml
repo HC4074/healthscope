@@ -18,7 +18,16 @@ services:
 
   api:
     <<: *api-service
-    command: ["uvicorn", "healthscope.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command:
+      [
+        "uvicorn",
+        "healthscope.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-access-log",
+      ]
     expose:
       - "8000"
     depends_on:

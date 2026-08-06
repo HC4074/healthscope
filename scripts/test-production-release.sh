@@ -59,6 +59,7 @@ with open(sys.argv[1], encoding="utf-8") as config_file:
 assert services["api"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
 assert services["api"]["depends_on"]["database"]["condition"] == "service_healthy"
 assert services["frontend"]["depends_on"]["api"]["condition"] == "service_healthy"
+assert "--no-access-log" in services["api"]["command"]
 assert not services["api"].get("ports")
 assert not services["database"].get("ports")
 assert str(services["frontend"]["ports"][0]["published"]) == sys.argv[2]
@@ -66,7 +67,9 @@ PY
 
 "${compose[@]}" up --detach --wait --wait-timeout 180 database api frontend
 
-curl --fail --silent --show-error "${base_url}/api/v1/health" >"${response_dir}/health.json"
+curl --fail --silent --show-error \
+  --dump-header "${response_dir}/health.headers" \
+  "${base_url}/api/v1/health?release_probe=must-not-be-logged" >"${response_dir}/health.json"
 python - "${response_dir}/health.json" <<'PY'
 import json
 import sys
@@ -77,6 +80,31 @@ with open(sys.argv[1], encoding="utf-8") as response_file:
 assert response["status"] == "ok"
 assert response["environment"] == "production"
 PY
+
+python - "${response_dir}/health.headers" "${response_dir}/request-id.txt" <<'PY'
+import re
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as response_file:
+    headers = response_file.read()
+
+match = re.search(r"^X-Request-ID:\s*(\S+)\s*$", headers, re.IGNORECASE | re.MULTILINE)
+assert match is not None
+assert re.fullmatch(r"[0-9a-f]{32}", match.group(1))
+
+with open(sys.argv[2], "w", encoding="utf-8") as request_id_file:
+    request_id_file.write(match.group(1))
+PY
+
+"${compose[@]}" logs --no-color frontend api >"${response_dir}/request.log"
+request_id="$(<"${response_dir}/request-id.txt")"
+grep --quiet "\"request_id\":\"${request_id}\"" "${response_dir}/request.log"
+grep --quiet '"event":"http_request_completed"' "${response_dir}/request.log"
+grep --quiet '"event":"proxy_request_completed"' "${response_dir}/request.log"
+if grep --quiet 'release_probe\|must-not-be-logged' "${response_dir}/request.log"; then
+  echo "Production access logs included a query-string marker." >&2
+  exit 1
+fi
 
 curl --fail --silent --show-error "${base_url}/api/v1/ready" >"${response_dir}/ready.json"
 python - "${response_dir}/ready.json" <<'PY'

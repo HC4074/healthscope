@@ -18,7 +18,7 @@ services:
       [
         "sh",
         "-c",
-        "alembic upgrade head && uvicorn healthscope.main:app --host 0.0.0.0 --port 8000",
+        "alembic upgrade head && uvicorn healthscope.main:app --host 0.0.0.0 --port 8000 --no-access-log",
       ]
     ports:
       - "8000:8000"

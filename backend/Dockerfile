@@ -17,4 +17,4 @@ RUN python -m pip install --upgrade pip && python -m pip install .
 USER healthscope
 EXPOSE 8000
 
-CMD ["uvicorn", "healthscope.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "healthscope.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

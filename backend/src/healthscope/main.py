@@ -8,6 +8,7 @@ from healthscope.api.routes.drug_recalls import router as drug_recalls_router
 from healthscope.api.routes.health import router as health_router
 from healthscope.api.routes.hospitals import router as hospitals_router
 from healthscope.config import Settings, get_settings
+from healthscope.observability import RequestObservabilityMiddleware
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -21,6 +22,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+    )
+    application.add_middleware(
+        RequestObservabilityMiddleware,
+        environment=resolved_settings.environment,
+        version=__version__,
     )
     if settings is not None:
 
