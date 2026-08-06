@@ -214,3 +214,36 @@ def test_fetch_drug_recalls_normalizes_blank_legacy_fields() -> None:
     assert recall.state is None
     assert recall.recall_initiation_date is None
     assert recall.product_quantity is None
+
+
+def test_fetch_drug_recalls_normalizes_current_fda_not_available_sentinels() -> None:
+    """Accept the official July 2026 foreign-firm and quantity sentinels."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=fda_payload(
+                results=[
+                    fda_record(
+                        recall_number="D-0716-2026",
+                        event_id="99440",
+                        recalling_firm="Rohto-Mentholatum (Vietnam) Co., Ltd.",
+                        city="Ho Chi Minh",
+                        state="N/A",
+                        country="Vietnam",
+                        product_quantity="N/A",
+                        report_date="20260729",
+                    )
+                ],
+                total=17860,
+            ),
+        )
+
+    page = asyncio.run(
+        build_client(handler).fetch_drug_recalls(limit=2, offset=0, classification=None)
+    )
+
+    recall = page.items[0]
+    assert recall.recall_number == "D-0716-2026"
+    assert recall.state is None
+    assert recall.product_quantity is None

@@ -38,9 +38,9 @@ class FDADataError(FDAClientError):
 
 
 def _parse_optional_text(value: object) -> object:
-    """Normalize missing and blank legacy report fields."""
+    """Normalize openFDA's missing-value sentinels for optional fields."""
 
-    if value in {None, ""}:
+    if value in {None, "", "N/A"}:
         return None
     return value
 
