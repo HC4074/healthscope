@@ -10,6 +10,8 @@ application host.
 - Terminate TLS at the hosting platform or a reverse proxy in front of port 80.
 - Keep the API private; only the Nginx frontend publishes a host port and proxies
   same-origin `/api` requests to it.
+- Preserve the Nginx browser-security and cache headers at any upstream CDN or
+  TLS proxy. SPA documents must revalidate; hashed assets may remain immutable.
 - Use a managed PostgreSQL connection that requires TLS. Never reuse the local
   `healthscope-local-only` password.
 - Production settings fail before startup, migration, or ingestion when debug is
@@ -137,10 +139,12 @@ bash scripts/test-production-release.sh
 The check verifies unsafe production settings fail before startup, migration
 ordering, private API/database networking, same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
-Alembic head. It then stops PostgreSQL and requires readiness to return its safe
-503 contract, restarts PostgreSQL and requires recovery, and proves migrations
-fail closed against an unreachable database. The script always removes its
-containers and ephemeral database on exit.
+Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
+documents, and immutable content-hashed assets. It then stops PostgreSQL and
+requires readiness to return its safe 503 contract, restarts PostgreSQL and
+requires recovery, and proves migrations fail closed against an unreachable
+database. The script always removes its containers and ephemeral database on
+exit.
 
 ## Initialize and schedule CMS data
 

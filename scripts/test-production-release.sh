@@ -108,6 +108,13 @@ with open(sys.argv[1], encoding="utf-8") as response_file:
 match = re.search(r"^X-Request-ID:\s*(\S+)\s*$", headers, re.IGNORECASE | re.MULTILINE)
 assert match is not None
 assert re.fullmatch(r"[0-9a-f]{32}", match.group(1))
+assert re.search(
+    r"^Content-Security-Policy:\s*default-src 'self'",
+    headers,
+    re.IGNORECASE | re.MULTILINE,
+)
+assert re.search(r"^X-Content-Type-Options:\s*nosniff\s*$", headers, re.IGNORECASE | re.MULTILINE)
+assert not re.search(r"^Cache-Control:", headers, re.IGNORECASE | re.MULTILINE)
 
 with open(sys.argv[2], "w", encoding="utf-8") as request_id_file:
     request_id_file.write(match.group(1))
@@ -134,8 +141,69 @@ with open(sys.argv[1], encoding="utf-8") as response_file:
 assert response == {"status": "ready", "database": "available"}
 PY
 
-curl --fail --silent --show-error "${base_url}/overview" >"${response_dir}/overview.html"
+curl --fail --silent --show-error \
+  --dump-header "${response_dir}/overview.headers" \
+  "${base_url}/overview" >"${response_dir}/overview.html"
 grep --quiet '<div id="root"></div>' "${response_dir}/overview.html"
+python - \
+  "${response_dir}/overview.headers" \
+  "${response_dir}/overview.html" \
+  "${response_dir}/asset-url.txt" <<'PY'
+import re
+import sys
+
+
+def read_headers(path: str) -> dict[str, str]:
+    with open(path, encoding="utf-8") as response_file:
+        lines = response_file.read().splitlines()[1:]
+    return {
+        name.lower(): value.strip()
+        for line in lines
+        if ":" in line
+        for name, value in [line.split(":", 1)]
+    }
+
+
+headers = read_headers(sys.argv[1])
+assert headers["cache-control"] == "no-cache"
+assert headers["content-security-policy"] == (
+    "default-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; "
+    "frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'"
+)
+assert headers["cross-origin-opener-policy"] == "same-origin"
+assert headers["permissions-policy"] == "camera=(), geolocation=(), microphone=()"
+assert headers["referrer-policy"] == "strict-origin-when-cross-origin"
+assert headers["x-content-type-options"] == "nosniff"
+assert headers["x-frame-options"] == "DENY"
+
+with open(sys.argv[2], encoding="utf-8") as response_file:
+    document = response_file.read()
+asset_match = re.search(r'<script[^>]+src="([^"]+\.js)"', document)
+assert asset_match is not None
+with open(sys.argv[3], "w", encoding="utf-8") as asset_file:
+    asset_file.write(asset_match.group(1))
+PY
+
+asset_url="$(<"${response_dir}/asset-url.txt")"
+curl --fail --silent --show-error \
+  --dump-header "${response_dir}/asset.headers" \
+  "${base_url}${asset_url}" >/dev/null
+python - "${response_dir}/asset.headers" <<'PY'
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as response_file:
+    headers = {
+        name.lower(): value.strip()
+        for line in response_file.read().splitlines()[1:]
+        if ":" in line
+        for name, value in [line.split(":", 1)]
+    }
+
+assert headers["cache-control"] == "public, max-age=31536000, immutable"
+assert headers["content-security-policy"].startswith("default-src 'self'")
+assert headers["x-content-type-options"] == "nosniff"
+PY
 
 current_revision="$("${compose[@]}" exec --no-TTY api alembic current)"
 grep --quiet '(head)' <<<"${current_revision}"

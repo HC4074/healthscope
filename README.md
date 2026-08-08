@@ -55,6 +55,9 @@ structured completion events so operators can correlate monitor failures with
 container logs without recording request parameters. A scheduled compatibility
 smoke check queries bounded live samples from all three official sources each
 day, catching upstream schema drift without writing healthcare records.
+The public Nginx boundary also applies a restrictive same-origin content
+security policy, browser hardening headers, revalidated SPA entry documents,
+and immutable caching for content-hashed assets.
 
 ## Quick start
 

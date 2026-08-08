@@ -18,6 +18,11 @@ Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared
 links and browser back/forward navigation restore the same live-data view.
 
+The production Nginx boundary sends a restrictive same-origin content security
+policy and browser hardening headers on dashboard and API responses. SPA entry
+documents are revalidated on every visit, while content-hashed JavaScript and
+CSS assets are cached immutably for one year.
+
 ## Local development
 
 Run the API on port 8000, then start the Vite development server:
