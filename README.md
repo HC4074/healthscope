@@ -45,7 +45,10 @@ dashboard visualizations, and architecture documentation. See the current
 release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
 and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
-readiness failure, and recovery behavior. Successful `main` builds then publish
+readiness failure, recovery behavior, and a Chromium critical journey through
+live CDC county data. The browser check also fails on JavaScript errors,
+same-origin request failures, or content-security-policy violations. Successful
+`main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. Production configuration now fails before startup,
 migration, or ingestion if debug is enabled, PostgreSQL is not configured, or a

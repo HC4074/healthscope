@@ -43,3 +43,16 @@ npm run lint
 npm run test
 npm run build
 ```
+
+The production release harness also runs the Chromium journey against the
+Compose-served application. With that stack already listening on port 18080,
+install Chromium once with `npx --no-install playwright install chromium`, then
+run:
+
+```bash
+npm run test:e2e
+```
+
+Set `HEALTHSCOPE_E2E_BASE_URL` when the release stack uses another origin. The
+journey reads current CDC responses through the real same-origin API path and
+stores traces, screenshots, and video only when a run fails.

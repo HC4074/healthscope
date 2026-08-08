@@ -205,6 +205,8 @@ assert headers["content-security-policy"].startswith("default-src 'self'")
 assert headers["x-content-type-options"] == "nosniff"
 PY
 
+HEALTHSCOPE_E2E_BASE_URL="${base_url}" npm --prefix frontend run test:e2e
+
 current_revision="$("${compose[@]}" exec --no-TTY api alembic current)"
 grep --quiet '(head)' <<<"${current_revision}"
 

@@ -110,7 +110,10 @@ Deployment CI also boots the production images against an ephemeral, empty
 PostgreSQL instance. It verifies unsafe settings fail before startup, migration
 and dependency ordering, private service networking, Nginx/API routing,
 database-loss readiness behavior, request-ID propagation, database recovery,
-and fail-closed migrations before a release can advance.
+and fail-closed migrations before a release can advance. A Chromium journey
+then loads the production SPA, retrieves live CDC catalog and county records,
+advances a results page, and rejects page errors, same-origin request failures,
+or runtime content-security-policy violations.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,

@@ -132,6 +132,8 @@ Run the same check from a Docker-equipped development host:
 
 ```bash
 cp .env.production.example .env.production
+npm --prefix frontend ci
+(cd frontend && npx --no-install playwright install --with-deps chromium)
 docker compose -f compose.production.yaml build
 bash scripts/test-production-release.sh
 ```
@@ -140,11 +142,14 @@ The check verifies unsafe production settings fail before startup, migration
 ordering, private API/database networking, same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
 Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
-documents, and immutable content-hashed assets. It then stops PostgreSQL and
-requires readiness to return its safe 503 contract, restarts PostgreSQL and
-requires recovery, and proves migrations fail closed against an unreachable
-database. The script always removes its containers and ephemeral database on
-exit.
+documents, and immutable content-hashed assets. Chromium then follows a live
+CDC county-data journey through the same-origin production route and fails on
+page errors, request failures, or CSP violations; CI retains its trace,
+screenshot, video, and HTML report only on failure. The harness then stops
+PostgreSQL and requires readiness to return its safe 503 contract, restarts
+PostgreSQL and requires recovery, and proves migrations fail closed against an
+unreachable database. The script always removes its containers and ephemeral
+database on exit.
 
 ## Initialize and schedule CMS data
 
