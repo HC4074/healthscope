@@ -247,3 +247,45 @@ def test_fetch_drug_recalls_normalizes_current_fda_not_available_sentinels() -> 
     assert recall.recall_number == "D-0716-2026"
     assert recall.state is None
     assert recall.product_quantity is None
+
+
+def test_fetch_drug_recalls_accepts_current_pending_classification() -> None:
+    """Accept FDA's pending-classification row published on July 29, 2026."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=fda_payload(
+                results=[
+                    fda_record(
+                        recall_number="N/A",
+                        event_id="99388",
+                        classification="Not Yet Classified",
+                        recalling_firm="Precision Dose Inc.",
+                        city="South Beloit",
+                        state="IL",
+                        product_description=(
+                            "Glycopyrrolate Oral Solution, 1 mg/5 mL, unit-dose oral syringes"
+                        ),
+                        reason_for_recall=(
+                            "Out-of-specification result for an unidentified impurity"
+                        ),
+                        distribution_pattern="US Nationwide.",
+                        product_quantity="N/A",
+                        recall_initiation_date="20260714",
+                        report_date="20260729",
+                    )
+                ],
+                total=17860,
+            ),
+        )
+
+    page = asyncio.run(
+        build_client(handler).fetch_drug_recalls(limit=2, offset=0, classification=None)
+    )
+
+    recall = page.items[0]
+    assert recall.recall_number is None
+    assert recall.event_id == "99388"
+    assert recall.classification == "Not Yet Classified"
+    assert recall.product_quantity is None

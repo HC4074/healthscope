@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 RecallClassification = Literal["Class I", "Class II", "Class III"]
+RecallRecordClassification = Literal["Class I", "Class II", "Class III", "Not Yet Classified"]
 RecallStatus = Literal["Ongoing", "Completed", "Terminated"]
 
 
@@ -14,9 +15,9 @@ class DrugRecall(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    recall_number: str
+    recall_number: str | None
     event_id: str | None
-    classification: RecallClassification
+    classification: RecallRecordClassification
     status: RecallStatus | None
     recalling_firm: str
     city: str | None

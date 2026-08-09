@@ -142,11 +142,13 @@ The check verifies unsafe production settings fail before startup, migration
 ordering, private API/database networking, same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
 Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
-documents, and immutable content-hashed assets. Chromium then follows a live
-CDC county-data journey through the same-origin production route and fails on
+documents, and immutable content-hashed assets. Chromium then follows the
+cross-source overview plus live CDC county-data and FDA recall journeys through
+the same-origin production route at desktop and mobile viewports. It fails on
 page errors, request failures, CSP violations, detected WCAG A/AA violations,
-or broken keyboard skip/filter/pagination behavior; CI retains its trace,
-screenshot, video, and HTML report only on failure. This automated coverage is
+horizontal mobile overflow, or broken keyboard skip/navigation/filter/pagination
+behavior and focus recovery; CI retains its trace, screenshot, video, and HTML
+report only on failure. This automated coverage is
 not a substitute for manual screen-reader and usability testing. The harness
 then stops PostgreSQL and requires readiness to return its safe 503 contract, restarts
 PostgreSQL and requires recovery, and proves migrations fail closed against an

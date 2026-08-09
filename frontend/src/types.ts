@@ -49,11 +49,12 @@ export interface CountyHealthPage {
 }
 
 export type RecallClassification = "Class I" | "Class II" | "Class III";
+export type RecallRecordClassification = RecallClassification | "Not Yet Classified";
 
 export interface DrugRecall {
-  recall_number: string;
+  recall_number: string | null;
   event_id: string | null;
-  classification: RecallClassification;
+  classification: RecallRecordClassification;
   status: "Ongoing" | "Completed" | "Terminated" | null;
   recalling_firm: string;
   city: string | null;

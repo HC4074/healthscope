@@ -14,6 +14,7 @@ from healthscope.schemas.drug_recalls import (
     DrugRecallDataSource,
     DrugRecallPage,
     RecallClassification,
+    RecallRecordClassification,
     RecallStatus,
 )
 
@@ -50,9 +51,9 @@ class _FDARecall(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    recall_number: str = Field(min_length=1)
+    recall_number: str | None = Field(min_length=1)
     event_id: str | None = Field(default=None, pattern=r"^\d+$")
-    classification: RecallClassification
+    classification: RecallRecordClassification
     status: RecallStatus | None = None
     recalling_firm: str = Field(min_length=1)
     city: str | None = None
@@ -69,6 +70,7 @@ class _FDARecall(BaseModel):
 
     @field_validator(
         "event_id",
+        "recall_number",
         "city",
         "state",
         "country",
@@ -194,13 +196,23 @@ class FDAClient:
 
         records = payload.results
         metadata = payload.meta.results
-        recall_numbers = [record.recall_number for record in records]
+        record_keys = [
+            ("recall", record.recall_number)
+            if record.recall_number is not None
+            else (
+                "pending",
+                record.event_id,
+                record.product_description,
+                record.report_date,
+            )
+            for record in records
+        ]
         if metadata.skip != offset or metadata.limit != limit:
             raise FDADataError("FDA returned inconsistent pagination metadata")
         if not records or len(records) > limit or offset + len(records) > metadata.total:
             raise FDADataError("FDA returned an inconsistent recall page")
-        if len(recall_numbers) != len(set(recall_numbers)):
-            raise FDADataError("FDA returned duplicate recall numbers")
+        if len(record_keys) != len(set(record_keys)):
+            raise FDADataError("FDA returned duplicate recall records")
         if classification is not None and any(
             record.classification != classification for record in records
         ):

@@ -72,7 +72,10 @@ disclaimer, terms, license, and retrieval timestamp. Recall reports are public
 context only: FDA explicitly warns against using openFDA for medical-care
 decisions, public alerts, or recall lifecycle tracking.
 Optional legacy fields that openFDA reports as blank or `N/A` are normalized to
-`null`, including foreign recalling-firm state values.
+`null`, including foreign recalling-firm state values and the not-yet-assigned
+recall number on pending classifications. Unfiltered pages accept FDA's official
+`Not Yet Classified` value while keeping the query filter limited to assigned
+health-hazard classes.
 
 The FDA base URL and 10-second request timeout can be changed with
 `HEALTHSCOPE_FDA_API_BASE_URL` and `HEALTHSCOPE_FDA_REQUEST_TIMEOUT_SECONDS`.

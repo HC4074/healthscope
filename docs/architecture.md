@@ -15,10 +15,10 @@ application behavior, and storage can evolve independently.
    from live CDC aggregates, allowing clients to discover valid measure IDs,
    labels, categories, latest years, and county coverage without hard-coding
    source metadata. A separate FDA client retrieves newest-first drug recall
-   enforcement reports from openFDA, validates hazard classes, dates, ordering,
-   pagination, and source metadata, normalizes official blank/`N/A` optional
-   fields to null, and preserves FDA's medical-use disclaimer.
-   No bundled or fabricated healthcare dataset is used.
+   enforcement reports from openFDA, validates assigned and pending
+   classifications, dates, ordering, pagination, and source metadata, normalizes
+   official blank/`N/A` optional fields to null, and preserves FDA's medical-use
+   disclaimer. No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
    source dataset, UTC snapshot date, and facility ID.
@@ -55,8 +55,9 @@ application behavior, and storage can evolve independently.
    local development, while the production Nginx container routes it to the API
    service. This avoids enabling broad cross-origin access on the backend.
 4. The FDA recall explorer and chart code are loaded on demand to keep the
-   initial application bundle small. The recall view applies exact FDA hazard
-   classes, uses bounded newest-first pagination, exposes source freshness and
+   initial application bundle small. The recall view applies exact assigned FDA
+   hazard classes, labels not-yet-classified reports without implying a hazard
+   level, uses bounded newest-first pagination, exposes source freshness and
    terms, and keeps FDA's medical-care warning prominent. Frontend CI
    independently enforces typed builds, lint, and component and API-boundary
    tests.
@@ -110,12 +111,13 @@ Deployment CI also boots the production images against an ephemeral, empty
 PostgreSQL instance. It verifies unsafe settings fail before startup, migration
 and dependency ordering, private service networking, Nginx/API routing,
 database-loss readiness behavior, request-ID propagation, database recovery,
-and fail-closed migrations before a release can advance. A Chromium journey
-then loads the production SPA, retrieves live CDC catalog and county records,
-audits the rendered view against WCAG A/AA rules, exercises a visible skip link
-and filter/pagination focus order entirely by keyboard, advances a results page,
-and rejects page errors, same-origin request failures, or runtime
-content-security-policy violations. Automated rules complement rather than
+and fail-closed migrations before a release can advance. Chromium journeys then
+load the production SPA, retrieve the overview plus live CDC and FDA records,
+audit the rendered views against WCAG A/AA rules, exercise visible skip links,
+desktop and mobile navigation, and filter/pagination focus order entirely by
+keyboard, advance both result types, and reject horizontal mobile overflow,
+page errors, same-origin request failures, or runtime content-security-policy
+violations. Automated rules complement rather than
 replace manual assistive-technology review.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend

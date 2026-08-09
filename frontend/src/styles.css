@@ -46,7 +46,8 @@ button:focus-visible,
 a:focus-visible,
 select:focus-visible,
 #main-content:focus-visible,
-.table-heading h3:focus-visible {
+.table-heading h3:focus-visible,
+.recall-summary h2:focus-visible {
   outline: 3px solid #e9a082;
   outline-offset: 3px;
 }
@@ -1108,6 +1109,11 @@ footer p {
 .classification-badge.class-iii {
   color: #315c49;
   background: #dfede5;
+}
+
+.classification-badge.pending-classification {
+  color: #465d69;
+  background: #e3edf1;
 }
 
 .status-badge {

@@ -51,6 +51,10 @@ const recallPage: DrugRecallPage = {
     license_url: "https://open.fda.gov/license/",
   },
 };
+const capturedRecall = recallPage.items[0];
+if (!capturedRecall) {
+  throw new Error("The captured FDA page must include one recall.");
+}
 
 const mockedRecalls = vi.mocked(fetchDrugRecalls);
 const defaultRoute: RecallRoute = { view: "recalls", offset: 0 };
@@ -87,6 +91,27 @@ describe("drug recall explorer", () => {
     );
   });
 
+  it("labels a current FDA recall that is still pending classification", async () => {
+    mockedRecalls.mockResolvedValue({
+      ...recallPage,
+      items: [
+        {
+          ...capturedRecall,
+          recall_number: null,
+          event_id: "99388",
+          classification: "Not Yet Classified",
+          recalling_firm: "Precision Dose Inc.",
+        },
+      ],
+    });
+
+    renderExplorer();
+
+    expect(await screen.findByText("Not Yet Classified")).toBeVisible();
+    expect(screen.getByText("Recall number pending · Event 99388")).toBeVisible();
+    expect(screen.getByText(/recalls FDA has not yet classified/i)).toBeVisible();
+  });
+
   it("applies an exact hazard-class filter", async () => {
     const user = userEvent.setup();
     const { onNavigate } = renderExplorer();
@@ -116,6 +141,28 @@ describe("drug recall explorer", () => {
       classification: "Class II",
       offset: 10,
     });
+  });
+
+  it("moves focus to the results summary after keyboard pagination", async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { rerender } = renderExplorer(defaultRoute, onNavigate);
+    await screen.findByRole("heading", { name: "Chiesi USA, Inc." });
+
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: /Next/ }));
+    const nextPage = { ...recallPage, offset: 10 };
+    mockedRecalls.mockResolvedValueOnce(nextPage);
+    rerender(
+      <DrugRecallExplorer
+        route={{ view: "recalls", offset: 10 }}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "All drug recall classes" }),
+    ).toHaveFocus();
   });
 
   it("offers a retry after an FDA request fails", async () => {

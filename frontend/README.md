@@ -4,9 +4,9 @@ The responsive React dashboard for exploring live HealthScope public-health
 data. The community-health view discovers its measure options from the API and
 presents paginated county estimates from CDC PLACES, including confidence
 intervals and source provenance. An on-demand drug-recall view presents
-newest-first FDA enforcement reports with hazard-class filtering, source
-freshness, FDA terms, pagination, and prominent medical-use disclaimers. It
-contains no bundled healthcare dataset.
+newest-first FDA enforcement reports with hazard-class filtering, explicit
+pending-classification labels, source freshness, FDA terms, pagination, and
+prominent medical-use disclaimers. It contains no bundled healthcare dataset.
 
 `/overview` is the product landing page. It loads the CMS ingestion health,
 CDC measure catalog, and a bounded FDA recall query independently, so one
@@ -54,9 +54,10 @@ npm run test:e2e
 ```
 
 Set `HEALTHSCOPE_E2E_BASE_URL` when the release stack uses another origin. The
-journey reads current CDC responses through the real same-origin API path and
-audits the rendered page against WCAG A/AA rules. It also verifies the visible
-skip link, filter focus order, and keyboard-operated pagination, and stores
-traces, screenshots, and video only when a run fails. The automated audit is a
+journeys read current CDC and FDA responses through the real same-origin API
+path and audit the overview and explorer pages against WCAG A/AA rules. They also
+verify the visible skip link, desktop and mobile navigation, mobile overflow,
+filter focus order, and keyboard-operated pagination with focus recovery, and
+store traces, screenshots, and video only when a run fails. The automated audit is a
 regression gate, not a claim of complete accessibility or a replacement for
 manual assistive-technology testing.

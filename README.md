@@ -32,9 +32,9 @@ automated backend quality checks, a PostgreSQL development container, and a
 responsive React community-health and drug-recall explorers. The dashboard
 discovers its measure filters from the live CDC catalog, presents paginated
 county estimates and confidence intervals, and lazily loads newest-first FDA
-recall reports with hazard-class filtering, safety disclaimers, and source
-provenance. Both views expose shareable URLs that preserve submitted filters and
-pagination across reloads and browser history navigation. A cross-source
+recall reports with hazard-class filtering, pending-classification context,
+safety disclaimers, and source provenance. Both views expose shareable URLs that
+preserve submitted filters and pagination across reloads and browser history navigation. A cross-source
 overview reports CMS ingestion health, CDC catalog breadth, and FDA source
 freshness independently, without joining incompatible entities or reporting
 years.
@@ -45,10 +45,11 @@ dashboard visualizations, and architecture documentation. See the current
 release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
 and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
-readiness failure, recovery behavior, and a Chromium critical journey through
-live CDC county data. The browser check also fails on JavaScript errors,
-same-origin request failures, content-security-policy violations, detected
-WCAG A/AA accessibility violations, or broken keyboard focus and pagination.
+readiness failure, recovery behavior, and Chromium critical journeys through
+the overview, live CDC county data, and live FDA recalls at desktop and mobile
+viewports. The browser checks also fail on JavaScript errors, same-origin request
+failures, content-security-policy violations, detected WCAG A/AA accessibility
+violations, horizontal mobile overflow, or broken keyboard focus and pagination.
 Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. Production configuration now fails before startup,

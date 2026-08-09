@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 
 import { ApiError, fetchDrugRecalls } from "./api";
 import { RECALL_PAGE_SIZE, type RecallRoute } from "./routing";
@@ -36,6 +36,20 @@ function formatDate(value: string | null): string {
 
 function recallLocation(recall: DrugRecall): string {
   return [recall.city, recall.state, recall.country].filter(Boolean).join(", ") || "Not reported";
+}
+
+function classificationClass(recall: DrugRecall): string {
+  return recall.classification === "Not Yet Classified"
+    ? "pending-classification"
+    : `class-${recall.classification.replace("Class ", "").toLowerCase()}`;
+}
+
+function recallKey(recall: DrugRecall): string {
+  return [
+    recall.recall_number ?? "pending",
+    recall.event_id ?? "no-event",
+    recall.product_description,
+  ].join(":");
 }
 
 function RecallLoading() {
@@ -79,10 +93,12 @@ function RecallResults({
   page,
   onPrevious,
   onNext,
+  pageHeadingRef,
 }: {
   page: DrugRecallPage;
   onPrevious: () => void;
   onNext: () => void;
+  pageHeadingRef: RefObject<HTMLHeadingElement | null>;
 }) {
   const firstRecord = page.offset + 1;
   const lastRecord = Math.min(page.offset + page.items.length, page.total);
@@ -94,7 +110,9 @@ function RecallResults({
       <section className="results-card recall-summary">
         <div>
           <p className="eyebrow">FDA enforcement reports</p>
-          <h2>{page.classification ?? "All drug recall classes"}</h2>
+          <h2 ref={pageHeadingRef} tabIndex={-1}>
+            {page.classification ?? "All drug recall classes"}
+          </h2>
           <p>
             Showing {formatNumber(firstRecord)}–{formatNumber(lastRecord)} of {formatNumber(page.total)} newest-first reports.
           </p>
@@ -107,10 +125,10 @@ function RecallResults({
 
       <section className="recall-list" aria-label="Drug recall reports">
         {page.items.map((recall) => (
-          <article className="results-card recall-card" key={recall.recall_number}>
+          <article className="results-card recall-card" key={recallKey(recall)}>
             <div className="recall-card-heading">
               <div>
-                <span className={`classification-badge class-${recall.classification.replace("Class ", "").toLowerCase()}`}>
+                <span className={`classification-badge ${classificationClass(recall)}`}>
                   {recall.classification}
                 </span>
                 {recall.status && <span className="status-badge">{recall.status}</span>}
@@ -137,7 +155,10 @@ function RecallResults({
                 <dd>{formatDate(recall.recall_initiation_date)}</dd>
               </div>
             </dl>
-            <p className="recall-id">Recall {recall.recall_number}{recall.event_id ? ` · Event ${recall.event_id}` : ""}</p>
+            <p className="recall-id">
+              {recall.recall_number ? `Recall ${recall.recall_number}` : "Recall number pending"}
+              {recall.event_id ? ` · Event ${recall.event_id}` : ""}
+            </p>
           </article>
         ))}
       </section>
@@ -180,6 +201,8 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
   );
   const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState<RequestState>({ status: "loading" });
+  const pendingPageFocus = useRef<number | null>(null);
+  const pageHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -198,6 +221,13 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
     return () => controller.abort();
   }, [route.classification, route.offset, attempt]);
 
+  useEffect(() => {
+    if (page.status === "success" && page.data.offset === pendingPageFocus.current) {
+      pageHeadingRef.current?.focus();
+      pendingPageFocus.current = null;
+    }
+  }, [page]);
+
   function applyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPage({ status: "loading" });
@@ -210,6 +240,7 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
   }
 
   function changePage(nextOffset: number) {
+    pendingPageFocus.current = nextOffset;
     setPage({ status: "loading" });
     onNavigate({ ...route, offset: nextOffset });
     window.scrollTo({ top: 420, behavior: "smooth" });
@@ -244,7 +275,10 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
               {CLASSIFICATIONS.map((classification) => <option key={classification}>{classification}</option>)}
             </select>
           </div>
-          <p>Class I has the highest potential health risk; classification is assigned by FDA.</p>
+          <p>
+            Class I has the highest potential health risk. Unfiltered results can also include
+            recalls FDA has not yet classified.
+          </p>
           <button className="primary-button" type="submit">Apply filter <span aria-hidden="true">→</span></button>
         </form>
       </section>
@@ -260,6 +294,7 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
             page={page.data}
             onPrevious={() => changePage(Math.max(0, page.data.offset - RECALL_PAGE_SIZE))}
             onNext={() => changePage(page.data.offset + RECALL_PAGE_SIZE)}
+            pageHeadingRef={pageHeadingRef}
           />
         )}
       </section>

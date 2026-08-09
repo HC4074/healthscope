@@ -657,7 +657,7 @@ export default function App() {
             }
           >
             <DrugRecallExplorer
-              key={dashboardRouteUrl(route)}
+              key={route.classification ?? "all"}
               route={route}
               onNavigate={navigate}
             />
