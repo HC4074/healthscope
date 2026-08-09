@@ -1,4 +1,13 @@
-import { FormEvent, lazy, type MouseEvent, Suspense, useEffect, useRef, useState } from "react";
+import {
+  FormEvent,
+  lazy,
+  type MouseEvent,
+  type RefObject,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { ApiError, fetchCountyHealth, fetchMeasureCatalog } from "./api";
 import Overview from "./Overview";
@@ -133,11 +142,13 @@ function ResultsPanel({
   measure,
   onPrevious,
   onNext,
+  pageHeadingRef,
 }: {
   page: CountyHealthPage;
   measure: CommunityHealthMeasure | undefined;
   onPrevious: () => void;
   onNext: () => void;
+  pageHeadingRef: RefObject<HTMLHeadingElement | null>;
 }) {
   const prevalences = page.items
     .map((item) => item.prevalence_percent)
@@ -220,7 +231,7 @@ function ResultsPanel({
         <div className="section-heading table-heading">
           <div>
             <p className="eyebrow">County detail</p>
-            <h3>
+            <h3 ref={pageHeadingRef} tabIndex={-1}>
               Showing {firstRecord}–{lastRecord} of {formatNumber(page.total)}
             </h3>
           </div>
@@ -310,6 +321,8 @@ export default function App() {
     status: "idle",
   });
   const [countyAttempt, setCountyAttempt] = useState(0);
+  const pendingPageFocus = useRef<number | null>(null);
+  const pageHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const onPopState = () => {
@@ -407,6 +420,16 @@ export default function App() {
     return () => controller.abort();
   }, [activeQuery, countyAttempt, route.view]);
 
+  useEffect(() => {
+    if (
+      countyPage.status === "success" &&
+      countyPage.data.offset === pendingPageFocus.current
+    ) {
+      pageHeadingRef.current?.focus();
+      pendingPageFocus.current = null;
+    }
+  }, [countyPage]);
+
   const measures = catalog.status === "success" ? catalog.data.items : [];
   const groups = measureGroups(measures);
   const activeMeasure = measures.find(
@@ -431,6 +454,7 @@ export default function App() {
 
   function changePage(offset: number) {
     if (route.view === "community") {
+      pendingPageFocus.current = offset;
       navigate({ ...route, offset });
     }
     window.scrollTo({ top: 420, behavior: "smooth" });
@@ -484,7 +508,10 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" id="top">
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <header className="site-header">
         <a
           className="brand"
@@ -527,7 +554,7 @@ export default function App() {
         <span className="header-badge">Public data · No PHI</span>
       </header>
 
-      <main id="top">
+      <main id="main-content" tabIndex={-1}>
         {route.view === "overview" ? (
           <Overview onNavigate={navigate} />
         ) : route.view === "community" ? (
@@ -616,6 +643,7 @@ export default function App() {
               measure={activeMeasure}
               onPrevious={() => changePage(Math.max(0, countyPage.data.offset - COMMUNITY_PAGE_SIZE))}
               onNext={() => changePage(countyPage.data.offset + COMMUNITY_PAGE_SIZE)}
+              pageHeadingRef={pageHeadingRef}
             />
           )}
         </section>

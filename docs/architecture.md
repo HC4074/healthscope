@@ -112,8 +112,11 @@ and dependency ordering, private service networking, Nginx/API routing,
 database-loss readiness behavior, request-ID propagation, database recovery,
 and fail-closed migrations before a release can advance. A Chromium journey
 then loads the production SPA, retrieves live CDC catalog and county records,
-advances a results page, and rejects page errors, same-origin request failures,
-or runtime content-security-policy violations.
+audits the rendered view against WCAG A/AA rules, exercises a visible skip link
+and filter/pagination focus order entirely by keyboard, advances a results page,
+and rejects page errors, same-origin request failures, or runtime
+content-security-policy violations. Automated rules complement rather than
+replace manual assistive-technology review.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,

@@ -47,8 +47,9 @@ and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
 readiness failure, recovery behavior, and a Chromium critical journey through
 live CDC county data. The browser check also fails on JavaScript errors,
-same-origin request failures, or content-security-policy violations. Successful
-`main` builds then publish
+same-origin request failures, content-security-policy violations, detected
+WCAG A/AA accessibility violations, or broken keyboard focus and pagination.
+Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. Production configuration now fails before startup,
 migration, or ingestion if debug is enabled, PostgreSQL is not configured, or a

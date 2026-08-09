@@ -44,9 +44,30 @@ a {
 
 button:focus-visible,
 a:focus-visible,
-select:focus-visible {
+select:focus-visible,
+#main-content:focus-visible,
+.table-heading h3:focus-visible {
   outline: 3px solid #e9a082;
   outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  color: #fff;
+  background: #1d4938;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .sr-only {

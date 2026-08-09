@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 interface MeasureCatalog {
@@ -25,7 +26,7 @@ declare global {
   }
 }
 
-test("explores live CDC county data without browser or CSP failures", async ({
+test("explores live CDC county data with accessible keyboard navigation", async ({
   baseURL,
   page,
 }) => {
@@ -101,6 +102,24 @@ test("explores live CDC county data without browser or CSP failures", async ({
     page.getByRole("cell", { name: `${firstCounty.prevalence_percent.toFixed(1)}%` }),
   ).toBeVisible();
 
+  const accessibilityScan = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"])
+    .analyze();
+  expect(accessibilityScan.violations).toEqual([]);
+
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", { name: "Skip to main content" });
+  await expect(skipLink).toBeFocused();
+  await expect(skipLink).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("State")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Health measure")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: /Explore counties/ })).toBeFocused();
+
   const nextPageResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -108,13 +127,20 @@ test("explores live CDC county data without browser or CSP failures", async ({
       url.searchParams.get("offset") === String(firstPage.limit)
     );
   });
-  await page.getByRole("button", { name: /Next/ }).click();
+  const nextButton = page.getByRole("button", { name: /Next/ });
+  await nextButton.focus();
+  await page.keyboard.press("Enter");
   const nextPageResponse = await nextPageResponsePromise;
   expect(nextPageResponse.status()).toBe(200);
   const nextPage = (await nextPageResponse.json()) as CountyPage;
   expect(nextPage.offset).toBe(firstPage.limit);
   await expect(page).toHaveURL(/\/community-health\?.*page=2/);
   await expect(page.locator("tbody tr")).toHaveCount(nextPage.items.length);
+  await expect(
+    page.getByRole("heading", {
+      name: `Showing ${nextPage.offset + 1}–${nextPage.offset + nextPage.items.length} of ${nextPage.total}`,
+    }),
+  ).toBeFocused();
 
   expect(await page.evaluate(() => window.__healthscopeCspViolations)).toEqual([]);
   expect(browserFailures).toEqual([]);

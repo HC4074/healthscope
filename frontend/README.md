@@ -55,4 +55,8 @@ npm run test:e2e
 
 Set `HEALTHSCOPE_E2E_BASE_URL` when the release stack uses another origin. The
 journey reads current CDC responses through the real same-origin API path and
-stores traces, screenshots, and video only when a run fails.
+audits the rendered page against WCAG A/AA rules. It also verifies the visible
+skip link, filter focus order, and keyboard-operated pagination, and stores
+traces, screenshots, and video only when a run fails. The automated audit is a
+regression gate, not a claim of complete accessibility or a replacement for
+manual assistive-technology testing.

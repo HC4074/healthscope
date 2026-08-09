@@ -144,9 +144,11 @@ production liveness and readiness responses, the SPA fallback, and the current
 Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
 documents, and immutable content-hashed assets. Chromium then follows a live
 CDC county-data journey through the same-origin production route and fails on
-page errors, request failures, or CSP violations; CI retains its trace,
-screenshot, video, and HTML report only on failure. The harness then stops
-PostgreSQL and requires readiness to return its safe 503 contract, restarts
+page errors, request failures, CSP violations, detected WCAG A/AA violations,
+or broken keyboard skip/filter/pagination behavior; CI retains its trace,
+screenshot, video, and HTML report only on failure. This automated coverage is
+not a substitute for manual screen-reader and usability testing. The harness
+then stops PostgreSQL and requires readiness to return its safe 503 contract, restarts
 PostgreSQL and requires recovery, and proves migrations fail closed against an
 unreachable database. The script always removes its containers and ephemeral
 database on exit.
