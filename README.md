@@ -47,9 +47,11 @@ and rollback contract. Deployment CI boots those production images with an
 ephemeral empty PostgreSQL instance and exercises routing, migrations,
 readiness failure, recovery behavior, and Chromium critical journeys through
 the overview, live CDC county data, and live FDA recalls at desktop and mobile
-viewports. The browser checks also fail on JavaScript errors, same-origin request
-failures, content-security-policy violations, detected WCAG A/AA accessibility
-violations, horizontal mobile overflow, or broken keyboard focus and pagination.
+viewports. The browser checks submit live CDC and FDA filters, restore them with
+browser back/forward navigation, and fail on JavaScript errors, same-origin
+request failures, content-security-policy violations, detected WCAG A/AA
+accessibility violations, horizontal mobile overflow, or broken keyboard focus
+and pagination.
 Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. Production configuration now fails before startup,

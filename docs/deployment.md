@@ -146,9 +146,10 @@ documents, and immutable content-hashed assets. Chromium then follows the
 cross-source overview plus live CDC county-data and FDA recall journeys through
 the same-origin production route at desktop and mobile viewports. It fails on
 page errors, request failures, CSP violations, detected WCAG A/AA violations,
-horizontal mobile overflow, or broken keyboard skip/navigation/filter/pagination
-behavior and focus recovery; CI retains its trace, screenshot, video, and HTML
-report only on failure. This automated coverage is
+horizontal mobile overflow, broken submitted-filter or browser-history
+restoration, or broken keyboard skip/navigation/filter/pagination behavior and
+focus recovery; CI retains its trace, screenshot, video, and HTML report only on
+failure. This automated coverage is
 not a substitute for manual screen-reader and usability testing. The harness
 then stops PostgreSQL and requires readiness to return its safe 503 contract, restarts
 PostgreSQL and requires recovery, and proves migrations fail closed against an

@@ -10,6 +10,7 @@ interface DrugRecallPage {
     recall_number: string | null;
     event_id: string | null;
     recalling_firm: string;
+    classification: string;
   }>;
   total: number;
   limit: number;
@@ -214,13 +215,66 @@ test.describe("mobile navigation", () => {
     const classification = page.getByLabel("Hazard classification");
     await classification.focus();
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: /Apply filter/ })).toBeFocused();
+    const applyButton = page.getByRole("button", { name: /Apply filter/ });
+    await expect(applyButton).toBeFocused();
+
+    await classification.selectOption("Class I");
+    const filteredResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/drug-recalls" &&
+        url.searchParams.get("classification") === "Class I" &&
+        url.searchParams.get("limit") === "10" &&
+        url.searchParams.get("offset") === "0"
+      );
+    });
+    await applyButton.click();
+    const filteredResponse = await filteredResponsePromise;
+    expect(filteredResponse.status()).toBe(200);
+    const filteredPage = (await filteredResponse.json()) as DrugRecallPage;
+    expect(filteredPage.items.length).toBeGreaterThan(0);
+    expect(filteredPage.total).toBeGreaterThan(filteredPage.items.length);
+    expect(filteredPage.items.every((item) => item.classification === "Class I")).toBe(true);
+    await expect(page).toHaveURL(/\/drug-recalls\?classification=Class\+I$/);
+    await expect(classification).toHaveValue("Class I");
+    await expect(page.getByRole("heading", { name: "Class I" })).toBeVisible();
+
+    const restoredUnfilteredResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/drug-recalls" &&
+        url.searchParams.get("classification") === null &&
+        url.searchParams.get("offset") === "0"
+      );
+    });
+    await page.goBack();
+    const restoredUnfilteredResponse = await restoredUnfilteredResponsePromise;
+    expect(restoredUnfilteredResponse.status()).toBe(200);
+    expect(await restoredUnfilteredResponse.finished()).toBeNull();
+    await expect(page.getByLabel("Hazard classification")).toHaveValue("");
+    await expect(page.getByRole("heading", { name: "All drug recall classes" })).toBeVisible();
+
+    const restoredFilteredResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/drug-recalls" &&
+        url.searchParams.get("classification") === "Class I" &&
+        url.searchParams.get("offset") === "0"
+      );
+    });
+    await page.goForward();
+    const restoredFilteredResponse = await restoredFilteredResponsePromise;
+    expect(restoredFilteredResponse.status()).toBe(200);
+    expect(await restoredFilteredResponse.finished()).toBeNull();
+    await expect(page.getByLabel("Hazard classification")).toHaveValue("Class I");
+    await expect(page.getByRole("heading", { name: "Class I" })).toBeVisible();
 
     const nextPageResponsePromise = page.waitForResponse((response) => {
       const url = new URL(response.url());
       return (
         url.pathname === "/api/v1/drug-recalls" &&
-        url.searchParams.get("offset") === String(firstPage.limit)
+        url.searchParams.get("classification") === "Class I" &&
+        url.searchParams.get("offset") === String(filteredPage.limit)
       );
     });
     const nextButton = page.getByRole("button", { name: /Next/ });
@@ -229,11 +283,10 @@ test.describe("mobile navigation", () => {
     const nextPageResponse = await nextPageResponsePromise;
     expect(nextPageResponse.status()).toBe(200);
     const nextPage = (await nextPageResponse.json()) as DrugRecallPage;
-    expect(nextPage.offset).toBe(firstPage.limit);
-    await expect(page).toHaveURL(/\/drug-recalls\?page=2$/);
-    await expect(
-      page.getByRole("heading", { name: "All drug recall classes" }),
-    ).toBeFocused();
+    expect(nextPage.offset).toBe(filteredPage.limit);
+    expect(nextPage.items.every((item) => item.classification === "Class I")).toBe(true);
+    await expect(page).toHaveURL(/\/drug-recalls\?classification=Class\+I&page=2$/);
+    await expect(page.getByRole("heading", { name: "Class I" })).toBeFocused();
 
     await expectBrowserClean(page, browserFailures);
   });

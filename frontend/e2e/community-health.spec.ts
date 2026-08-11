@@ -118,13 +118,78 @@ test("explores live CDC county data with accessible keyboard navigation", async 
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Health measure")).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: /Explore counties/ })).toBeFocused();
+  const applyButton = page.getByRole("button", { name: /Explore counties/ });
+  await expect(applyButton).toBeFocused();
+
+  const accessMeasure = catalog.items.find((item) => item.measure_id === "ACCESS2");
+  if (!accessMeasure) {
+    throw new Error("CDC no longer reports the ACCESS2 measure.");
+  }
+  await page.getByLabel("State").selectOption("CA");
+  await page.getByLabel("Health measure").selectOption(accessMeasure.measure_id);
+  const filteredResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === "/api/v1/community-health/counties" &&
+      url.searchParams.get("state") === "CA" &&
+      url.searchParams.get("measure_id") === accessMeasure.measure_id &&
+      url.searchParams.get("offset") === "0"
+    );
+  });
+  await applyButton.click();
+  const filteredResponse = await filteredResponsePromise;
+  expect(filteredResponse.status()).toBe(200);
+  const filteredPage = (await filteredResponse.json()) as CountyPage;
+  expect(filteredPage.state).toBe("CA");
+  expect(filteredPage.measure_id).toBe(accessMeasure.measure_id);
+  expect(filteredPage.items.length).toBeGreaterThan(0);
+  expect(filteredPage.total).toBeGreaterThan(filteredPage.items.length);
+  await expect(page).toHaveURL(
+    `/community-health?state=CA&measure=${accessMeasure.measure_id}`,
+  );
+  await expect(page.getByRole("heading", { name: accessMeasure.measure })).toBeVisible();
+
+  const restoredInitialResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === "/api/v1/community-health/counties" &&
+      url.searchParams.get("state") === "AL" &&
+      url.searchParams.get("measure_id") === "DIABETES" &&
+      url.searchParams.get("offset") === "0"
+    );
+  });
+  await page.goBack();
+  const restoredInitialResponse = await restoredInitialResponsePromise;
+  expect(restoredInitialResponse.status()).toBe(200);
+  expect(await restoredInitialResponse.finished()).toBeNull();
+  await expect(page.getByLabel("State")).toHaveValue("AL");
+  await expect(page.getByLabel("Health measure")).toHaveValue("DIABETES");
+  await expect(page.getByRole("heading", { name: diabetesMeasure.measure })).toBeVisible();
+
+  const restoredFilteredResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === "/api/v1/community-health/counties" &&
+      url.searchParams.get("state") === "CA" &&
+      url.searchParams.get("measure_id") === accessMeasure.measure_id &&
+      url.searchParams.get("offset") === "0"
+    );
+  });
+  await page.goForward();
+  const restoredFilteredResponse = await restoredFilteredResponsePromise;
+  expect(restoredFilteredResponse.status()).toBe(200);
+  expect(await restoredFilteredResponse.finished()).toBeNull();
+  await expect(page.getByLabel("State")).toHaveValue("CA");
+  await expect(page.getByLabel("Health measure")).toHaveValue(accessMeasure.measure_id);
+  await expect(page.getByRole("heading", { name: accessMeasure.measure })).toBeVisible();
 
   const nextPageResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
       url.pathname === "/api/v1/community-health/counties" &&
-      url.searchParams.get("offset") === String(firstPage.limit)
+      url.searchParams.get("state") === "CA" &&
+      url.searchParams.get("measure_id") === accessMeasure.measure_id &&
+      url.searchParams.get("offset") === String(filteredPage.limit)
     );
   });
   const nextButton = page.getByRole("button", { name: /Next/ });
@@ -133,7 +198,7 @@ test("explores live CDC county data with accessible keyboard navigation", async 
   const nextPageResponse = await nextPageResponsePromise;
   expect(nextPageResponse.status()).toBe(200);
   const nextPage = (await nextPageResponse.json()) as CountyPage;
-  expect(nextPage.offset).toBe(firstPage.limit);
+  expect(nextPage.offset).toBe(filteredPage.limit);
   await expect(page).toHaveURL(/\/community-health\?.*page=2/);
   await expect(page.locator("tbody tr")).toHaveCount(nextPage.items.length);
   await expect(

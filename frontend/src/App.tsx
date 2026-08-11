@@ -327,6 +327,9 @@ export default function App() {
   useEffect(() => {
     const onPopState = () => {
       const requestedRoute = readDashboardRoute(window.location);
+      if (dashboardRouteUrl(requestedRoute) === dashboardRouteUrl(routeRef.current)) {
+        return;
+      }
       if (requestedRoute.view === "community" && catalog.status === "success") {
         const resolvedRoute = resolveCommunityRoute(requestedRoute, catalog.data);
         if (resolvedRoute) {
@@ -367,8 +370,10 @@ export default function App() {
       return;
     }
     const controller = new AbortController();
+    let isPending = true;
     void fetchMeasureCatalog(controller.signal)
       .then((result) => {
+        isPending = false;
         if (result.items.length === 0) {
           setCatalog({ status: "error", message: "CDC returned an empty measure catalog." });
           return;
@@ -392,11 +397,16 @@ export default function App() {
         }
       })
       .catch((error: unknown) => {
+        isPending = false;
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setCatalog({ status: "error", message: errorMessage(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [catalog.status, catalogAttempt, route.view]);
 
   useEffect(() => {
@@ -404,6 +414,7 @@ export default function App() {
       return;
     }
     const controller = new AbortController();
+    let isPending = true;
     void fetchCountyHealth({
       state: activeQuery.state,
       measureId: activeQuery.measureId,
@@ -411,13 +422,21 @@ export default function App() {
       offset: activeQuery.offset,
       signal: controller.signal,
     })
-      .then((result) => setCountyPage({ status: "success", data: result }))
+      .then((result) => {
+        isPending = false;
+        setCountyPage({ status: "success", data: result });
+      })
       .catch((error: unknown) => {
+        isPending = false;
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setCountyPage({ status: "error", message: errorMessage(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [activeQuery, countyAttempt, route.view]);
 
   useEffect(() => {

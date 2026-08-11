@@ -206,19 +206,28 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
 
   useEffect(() => {
     const controller = new AbortController();
+    let isPending = true;
     void fetchDrugRecalls({
       classification: route.classification,
       limit: RECALL_PAGE_SIZE,
       offset: route.offset,
       signal: controller.signal,
     })
-      .then((result) => setPage({ status: "success", data: result }))
+      .then((result) => {
+        isPending = false;
+        setPage({ status: "success", data: result });
+      })
       .catch((error: unknown) => {
+        isPending = false;
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setPage({ status: "error", message: errorMessage(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [route.classification, route.offset, attempt]);
 
   useEffect(() => {

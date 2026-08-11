@@ -114,10 +114,11 @@ database-loss readiness behavior, request-ID propagation, database recovery,
 and fail-closed migrations before a release can advance. Chromium journeys then
 load the production SPA, retrieve the overview plus live CDC and FDA records,
 audit the rendered views against WCAG A/AA rules, exercise visible skip links,
-desktop and mobile navigation, and filter/pagination focus order entirely by
-keyboard, advance both result types, and reject horizontal mobile overflow,
-page errors, same-origin request failures, or runtime content-security-policy
-violations. Automated rules complement rather than
+desktop and mobile navigation, submit live filters, restore filtered views with
+browser back/forward navigation, verify filter/pagination focus order, advance
+both result types, and reject horizontal mobile overflow, page errors,
+same-origin request failures, or runtime content-security-policy violations.
+Automated rules complement rather than
 replace manual assistive-technology review.
 This validates the provider-neutral runtime contract without persisting test
 healthcare data. After those checks pass on `main`, separate API and frontend

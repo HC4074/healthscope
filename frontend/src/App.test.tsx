@@ -201,6 +201,20 @@ describe("community health explorer", () => {
     expect(screen.getByLabelText("Health measure")).toHaveValue("ACCESS2");
   });
 
+  it("does not refetch live data for hash-only history changes", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" });
+
+    window.history.pushState(
+      null,
+      "",
+      "/community-health?state=AL&measure=DIABETES#main-content",
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    await waitFor(() => expect(mockedCounties).toHaveBeenCalledTimes(1));
+  });
+
   it("opens a drug-recall deep link without requesting the CDC catalog", async () => {
     window.history.replaceState(
       null,
