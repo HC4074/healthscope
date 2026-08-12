@@ -162,6 +162,29 @@ test.describe("mobile navigation", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
+    const mobileHeader = page.getByRole("banner");
+    await expect(mobileHeader.getByText("HealthScope", { exact: true })).toBeVisible();
+    const mobileNavigationLinks = mobileHeader
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link");
+    const mobileNavigationLayout = await mobileNavigationLinks.evaluateAll((links) =>
+      links.map((link) => {
+        const bounds = link.getBoundingClientRect();
+        return {
+          fontSize: Number.parseFloat(window.getComputedStyle(link).fontSize),
+          left: bounds.left,
+          right: bounds.right,
+        };
+      }),
+    );
+    expect(mobileNavigationLayout).toHaveLength(3);
+    const mobileViewportWidth = page.viewportSize()?.width ?? 0;
+    expect(
+      mobileNavigationLayout.every(
+        ({ fontSize, left, right }) =>
+          fontSize >= 13 && left >= 0 && right <= mobileViewportWidth,
+      ),
+    ).toBe(true);
 
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();

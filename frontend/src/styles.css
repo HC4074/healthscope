@@ -1270,16 +1270,24 @@ footer p {
   }
 
   .site-header {
-    height: 72px;
-    gap: 0.7rem;
+    display: grid;
+    height: auto;
+    min-height: 112px;
+    padding-top: 0.9rem;
+    gap: 0;
+    grid-template-columns: 1fr;
   }
 
   .site-header nav {
-    gap: 0.65rem;
+    width: 100%;
+    height: 52px;
+    gap: 0.9rem;
+    justify-content: space-between;
+    margin-left: 0;
   }
 
   .site-header nav a {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
   }
 
   .header-badge {
@@ -1378,12 +1386,6 @@ footer p {
   .skeleton-copy {
     max-width: 100%;
     width: 100%;
-  }
-}
-
-@media (max-width: 440px) {
-  .site-header > .brand > span:last-child {
-    display: none;
   }
 }
 

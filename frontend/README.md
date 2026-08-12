@@ -56,7 +56,7 @@ npm run test:e2e
 Set `HEALTHSCOPE_E2E_BASE_URL` when the release stack uses another origin. The
 journeys read current CDC and FDA responses through the real same-origin API
 path and audit the overview and explorer pages against WCAG A/AA rules. They also
-verify the visible skip link, desktop and mobile navigation, mobile overflow,
+verify the visible skip link, readable two-row mobile product navigation, mobile overflow,
 submitted CDC/FDA filters, browser back/forward restoration, filter focus order,
 and keyboard-operated pagination with focus recovery. They store traces,
 screenshots, and video only when a run fails. The automated audit is a
