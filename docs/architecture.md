@@ -114,7 +114,8 @@ database-loss readiness behavior, request-ID propagation, database recovery,
 and fail-closed migrations before a release can advance. Chromium journeys then
 load the production SPA, retrieve the overview plus live CDC and FDA records,
 audit the rendered views against WCAG A/AA rules, exercise visible skip links,
-desktop navigation and readable two-row mobile product navigation, submit live filters, restore filtered views with
+desktop navigation and readable two-row mobile product navigation without horizontal overflow down to the supported
+320px minimum, submit live filters, restore filtered views with
 browser back/forward navigation, verify filter/pagination focus order, advance
 both result types, and reject horizontal mobile overflow, page errors,
 same-origin request failures, or runtime content-security-policy violations.

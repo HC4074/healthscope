@@ -186,6 +186,27 @@ test.describe("mobile navigation", () => {
       ),
     ).toBe(true);
 
+    await page.setViewportSize({ width: 320, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    const narrowNavigationLayout = await mobileNavigationLinks.evaluateAll((links) =>
+      links.map((link) => {
+        const bounds = link.getBoundingClientRect();
+        return { left: bounds.left, right: bounds.right };
+      }),
+    );
+    const narrowViewportWidth = await page.evaluate(
+      () => document.documentElement.clientWidth,
+    );
+    expect(
+      narrowNavigationLayout.every(
+        ({ left, right }) => left >= 0 && right <= narrowViewportWidth,
+      ),
+    ).toBe(true);
+
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -232,6 +253,11 @@ test.describe("mobile navigation", () => {
     ).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    expect(
+      await page.locator(".recall-card-heading").evaluateAll((headings) =>
+        headings.every((heading) => heading.scrollWidth <= heading.clientWidth),
+      ),
     ).toBe(true);
     await expectAccessible(page);
 
