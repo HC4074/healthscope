@@ -635,28 +635,30 @@ export default function App() {
               Explore counties <span aria-hidden="true">→</span>
             </button>
           </form>
-          {catalog.status === "error" && (
-            <div className="catalog-error" role="alert">
-              <span>{catalog.message}</span>
-              <button type="button" onClick={retryCatalog}>
-                Retry measure catalog
-              </button>
-            </div>
-          )}
         </section>
 
         <section className="content-wrap" aria-live="polite">
-          {(countyPage.status === "idle" || countyPage.status === "loading") && <LoadingPanel />}
-          {countyPage.status === "error" && (
+          {catalog.status === "error" && (
             <ErrorPanel
-              message={countyPage.message}
-              onRetry={retryCounties}
+              message={catalog.message}
+              onRetry={retryCatalog}
             />
           )}
-          {countyPage.status === "success" && countyPage.data.items.length === 0 && (
+          {catalog.status !== "error" &&
+            (countyPage.status === "idle" || countyPage.status === "loading") && (
+              <LoadingPanel />
+            )}
+          {catalog.status !== "error" && countyPage.status === "error" && (
+            <ErrorPanel message={countyPage.message} onRetry={retryCounties} />
+          )}
+          {catalog.status !== "error" &&
+            countyPage.status === "success" &&
+            countyPage.data.items.length === 0 && (
             <EmptyPanel onRetry={retryCounties} />
           )}
-          {countyPage.status === "success" && countyPage.data.items.length > 0 && (
+          {catalog.status !== "error" &&
+            countyPage.status === "success" &&
+            countyPage.data.items.length > 0 && (
             <ResultsPanel
               page={countyPage.data}
               measure={activeMeasure}

@@ -62,3 +62,7 @@ and keyboard-operated pagination with focus recovery. They store traces,
 screenshots, and video only when a run fails. The automated audit is a
 regression gate, not a claim of complete accessibility or a replacement for
 manual assistive-technology testing.
+
+Component coverage also verifies that an unavailable CDC measure catalog
+replaces the county loading state with one actionable error and retries the
+catalog request before any county query is attempted.

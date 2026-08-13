@@ -154,6 +154,26 @@ describe("community health explorer", () => {
     expect(mockedCounties).toHaveBeenCalledTimes(2);
   });
 
+  it("replaces county loading with an actionable catalog error", async () => {
+    const user = userEvent.setup();
+    mockedCatalog.mockRejectedValueOnce(new Error("temporary"));
+    render(<App />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Something unexpected interrupted the request.");
+    expect(screen.queryByText("Loading live county health estimates")).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
+    expect(mockedCounties).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Diagnosed diabetes among adults" }),
+    ).toBeVisible();
+    expect(mockedCatalog).toHaveBeenCalledTimes(2);
+    expect(mockedCounties).toHaveBeenCalledTimes(1);
+  });
+
   it("switches to the lazy FDA dashboard view from primary navigation", async () => {
     const user = userEvent.setup();
     render(<App />);

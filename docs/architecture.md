@@ -50,7 +50,9 @@ application behavior, and storage can evolve independently.
 2. State and measure filters query the typed county endpoint in bounded pages.
    The view shows current-page comparisons, explicit confidence intervals,
    population context, loading/error/empty states, and a link to the exact
-   official source dataset.
+   official source dataset. If the live measure catalog is unavailable, its
+   error replaces the dependent county loading state and retries the catalog
+   before any county request, avoiding a contradictory perpetual busy state.
 3. Browser requests stay same-origin under `/api`. Vite proxies that path during
    local development, while the production Nginx container routes it to the API
    service. This avoids enabling broad cross-origin access on the backend.
