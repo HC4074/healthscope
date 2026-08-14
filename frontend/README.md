@@ -17,6 +17,9 @@ populations, entities, or reporting years into a synthetic KPI.
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared
 links and browser back/forward navigation restore the same live-data view.
+Recall pagination is bounded to openFDA's official 25,000-record skip ceiling;
+if a saved page falls beyond the changing live result set, the error or empty
+state can return to page one without dropping the submitted hazard filter.
 
 The production Nginx boundary sends a restrictive same-origin content security
 policy and browser hardening headers on dashboard and API responses. SPA entry

@@ -53,4 +53,13 @@ describe("dashboard routing", () => {
       }),
     ).toEqual({ view: "recalls", classification: undefined, offset: 0 });
   });
+
+  it("enforces the official openFDA pagination ceiling", () => {
+    expect(
+      readDashboardRoute({ pathname: "/drug-recalls", search: "?page=2501" }),
+    ).toEqual({ view: "recalls", classification: undefined, offset: 25_000 });
+    expect(
+      readDashboardRoute({ pathname: "/drug-recalls", search: "?page=2502" }),
+    ).toEqual({ view: "recalls", classification: undefined, offset: 0 });
+  });
 });

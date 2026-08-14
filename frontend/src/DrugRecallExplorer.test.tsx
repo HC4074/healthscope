@@ -179,6 +179,24 @@ describe("drug recall explorer", () => {
     expect(mockedRecalls).toHaveBeenCalledTimes(2);
   });
 
+  it("recovers an out-of-range FDA page without dropping its active filter", async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const route: RecallRoute = { view: "recalls", classification: "Class I", offset: 25_000 };
+    mockedRecalls.mockRejectedValueOnce(new Error("page is beyond the current live result set"));
+    renderExplorer(route, onNavigate);
+
+    expect(await screen.findByRole("alert")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Return to first page" }));
+
+    expect(onNavigate).toHaveBeenCalledWith({
+      view: "recalls",
+      classification: "Class I",
+      offset: 0,
+    });
+    expect(screen.getByText("Loading live FDA drug recall reports")).toBeInTheDocument();
+  });
+
   it("renders an explicit empty state for an official response with no matches", async () => {
     mockedRecalls.mockResolvedValue({ ...recallPage, items: [], total: 0 });
 

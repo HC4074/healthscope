@@ -5,11 +5,15 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, status
 
 from healthscope.clients.fda import FDAClientDependency, FDAClientError, FDAUpstreamTimeoutError
-from healthscope.schemas.drug_recalls import DrugRecallPage, RecallClassification
+from healthscope.schemas.drug_recalls import (
+    OPENFDA_MAX_SKIP,
+    DrugRecallPage,
+    RecallClassification,
+)
 
 router = APIRouter(prefix="/drug-recalls", tags=["drug recalls"])
 PageLimit = Annotated[int, Query(ge=1, le=100)]
-PageOffset = Annotated[int, Query(ge=0, le=25_900)]
+PageOffset = Annotated[int, Query(ge=0, le=OPENFDA_MAX_SKIP)]
 
 
 @router.get(

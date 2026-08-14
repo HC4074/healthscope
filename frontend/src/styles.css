@@ -767,6 +767,18 @@ tbody tr:hover {
   background: #f9e8e1;
 }
 
+.message-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.message-actions .compact-button {
+  margin-top: 0;
+}
+
 .compact-button {
   min-height: 44px;
   margin-top: 0.5rem;

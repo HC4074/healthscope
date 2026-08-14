@@ -60,7 +60,9 @@ application behavior, and storage can evolve independently.
    initial application bundle small. The recall view applies exact assigned FDA
    hazard classes, labels not-yet-classified reports without implying a hazard
    level, uses bounded newest-first pagination, exposes source freshness and
-   terms, and keeps FDA's medical-care warning prominent. Frontend CI
+   terms, and keeps FDA's medical-care warning prominent. Pagination respects
+   openFDA's 25,000-record skip ceiling, and stale deep links can recover to the
+   first live page without losing the submitted classification. Frontend CI
    independently enforces typed builds, lint, and component and API-boundary
    tests.
 5. A typed, dependency-free browser routing boundary maps the explorers to

@@ -3,6 +3,7 @@ import type { RecallClassification } from "./types";
 
 export const COMMUNITY_PAGE_SIZE = 25;
 export const RECALL_PAGE_SIZE = 10;
+export const RECALL_MAX_OFFSET = 25_000;
 
 export interface OverviewRoute {
   view: "overview";
@@ -54,7 +55,7 @@ export function readDashboardRoute(location: Pick<Location, "pathname" | "search
         classification && classifications.has(classification as RecallClassification)
           ? (classification as RecallClassification)
           : undefined,
-      offset: pageOffset(params, RECALL_PAGE_SIZE, 25_900),
+      offset: pageOffset(params, RECALL_PAGE_SIZE, RECALL_MAX_OFFSET),
     };
   }
 

@@ -71,20 +71,45 @@ function RecallMessage({
   kind,
   message,
   onRetry,
+  onReturnToFirstPage,
 }: {
   kind: "empty" | "error";
   message: string;
   onRetry: () => void;
+  onReturnToFirstPage?: () => void;
 }) {
+  const retryLabel = kind === "error" ? "Try again" : "Check the live source again";
   return (
-    <section className={`results-card message-card ${kind === "error" ? "error-card" : ""}`} role={kind === "error" ? "alert" : undefined}>
+    <section
+      className={`results-card message-card ${kind === "error" ? "error-card" : ""}`}
+      role={kind === "error" ? "alert" : undefined}
+    >
       <span className="message-mark" aria-hidden="true">{kind === "error" ? "!" : "0"}</span>
       <p className="eyebrow">{kind === "error" ? "Live data unavailable" : "No recall reports"}</p>
       <h2>{kind === "error" ? "We couldn’t refresh FDA reports." : "No reports matched this filter."}</h2>
       <p>{message}</p>
-      <button className={kind === "error" ? "primary-button compact-button" : "text-button"} type="button" onClick={onRetry}>
-        {kind === "error" ? "Try again" : "Check the live source again"}
-      </button>
+      <div className="message-actions">
+        {onReturnToFirstPage && (
+          <button
+            className="primary-button compact-button"
+            type="button"
+            onClick={onReturnToFirstPage}
+          >
+            Return to first page
+          </button>
+        )}
+        <button
+          className={
+            onReturnToFirstPage || kind === "empty"
+              ? "text-button"
+              : "primary-button compact-button"
+          }
+          type="button"
+          onClick={onRetry}
+        >
+          {onReturnToFirstPage ? "Try this page again" : retryLabel}
+        </button>
+      </div>
     </section>
   );
 }
@@ -294,9 +319,21 @@ export default function DrugRecallExplorer({ route, onNavigate }: DrugRecallExpl
 
       <section className="content-wrap" aria-live="polite">
         {page.status === "loading" && <RecallLoading />}
-        {page.status === "error" && <RecallMessage kind="error" message={page.message} onRetry={retry} />}
+        {page.status === "error" && (
+          <RecallMessage
+            kind="error"
+            message={page.message}
+            onRetry={retry}
+            onReturnToFirstPage={route.offset > 0 ? () => changePage(0) : undefined}
+          />
+        )}
         {page.status === "success" && page.data.items.length === 0 && (
-          <RecallMessage kind="empty" message="FDA does not currently return reports for this selection." onRetry={retry} />
+          <RecallMessage
+            kind="empty"
+            message="FDA does not currently return reports for this selection."
+            onRetry={retry}
+            onReturnToFirstPage={route.offset > 0 ? () => changePage(0) : undefined}
+          />
         )}
         {page.status === "success" && page.data.items.length > 0 && (
           <RecallResults

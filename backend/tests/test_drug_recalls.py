@@ -99,7 +99,7 @@ def test_drug_recall_endpoint_returns_paginated_live_data_contract() -> None:
 
 def test_drug_recall_endpoint_rejects_invalid_filters_and_pagination() -> None:
     with client_for(drug_recall_page()) as client:
-        response = client.get("/api/v1/drug-recalls?classification=Critical&limit=101&offset=25901")
+        response = client.get("/api/v1/drug-recalls?classification=Class%20II&limit=1&offset=25001")
 
     assert response.status_code == 422
 

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 RecallClassification = Literal["Class I", "Class II", "Class III"]
 RecallRecordClassification = Literal["Class I", "Class II", "Class III", "Not Yet Classified"]
 RecallStatus = Literal["Ongoing", "Completed", "Terminated"]
+OPENFDA_MAX_SKIP = 25_000
 
 
 class DrugRecall(BaseModel):
@@ -55,6 +56,6 @@ class DrugRecallPage(BaseModel):
     items: list[DrugRecall]
     total: int = Field(ge=0)
     limit: int = Field(ge=1, le=100)
-    offset: int = Field(ge=0, le=25_900)
+    offset: int = Field(ge=0, le=OPENFDA_MAX_SKIP)
     classification: RecallClassification | None
     source: DrugRecallDataSource
