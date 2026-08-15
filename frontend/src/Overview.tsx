@@ -244,38 +244,77 @@ export default function Overview({ onNavigate }: OverviewProps) {
 
   useEffect(() => {
     const controller = new AbortController();
+    let isCurrent = true;
+    let isPending = true;
     void fetchHospitalIngestionHealth(controller.signal)
-      .then((data) => setCms({ status: "success", data }))
+      .then((data) => {
+        isPending = false;
+        if (isCurrent) {
+          setCms({ status: "success", data });
+        }
+      })
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        isPending = false;
+        if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) {
           setCms({ status: "error", message: messageFor(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      isCurrent = false;
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [cmsAttempt]);
 
   useEffect(() => {
     const controller = new AbortController();
+    let isCurrent = true;
+    let isPending = true;
     void fetchMeasureCatalog(controller.signal)
-      .then((data) => setCdc({ status: "success", data }))
+      .then((data) => {
+        isPending = false;
+        if (isCurrent) {
+          setCdc({ status: "success", data });
+        }
+      })
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        isPending = false;
+        if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) {
           setCdc({ status: "error", message: messageFor(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      isCurrent = false;
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [cdcAttempt]);
 
   useEffect(() => {
     const controller = new AbortController();
+    let isCurrent = true;
+    let isPending = true;
     void fetchDrugRecalls({ limit: 1, offset: 0, signal: controller.signal })
-      .then((data) => setFda({ status: "success", data }))
+      .then((data) => {
+        isPending = false;
+        if (isCurrent) {
+          setFda({ status: "success", data });
+        }
+      })
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        isPending = false;
+        if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) {
           setFda({ status: "error", message: messageFor(error) });
         }
       });
-    return () => controller.abort();
+    return () => {
+      isCurrent = false;
+      if (isPending) {
+        controller.abort();
+      }
+    };
   }, [fdaAttempt]);
 
   function retryCms() {

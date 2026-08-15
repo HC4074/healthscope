@@ -72,7 +72,8 @@ application behavior, and storage can evolve independently.
 6. `/overview` is the canonical dashboard landing route. It requests the CMS
    ingestion health contract, CDC measure catalog, and a one-record FDA page in
    parallel, isolates failures and retries by source, preserves keyboard focus
-   when a retry settles, and links into the detailed explorers.
+   when a retry settles, cancels pending superseded requests, ignores late
+   completions from older attempts, and links into the detailed explorers.
    These cards retain their own provenance and freshness; they are not joined
    across incompatible entities or vintages.
 

@@ -38,7 +38,9 @@ preserve submitted filters and pagination across reloads and browser history nav
 overview reports CMS ingestion health, CDC catalog breadth, and FDA source
 freshness independently, without joining incompatible entities or reporting
 years. A failed overview source has its own retry control, so recovery does not
-reload healthy source cards.
+reload healthy source cards. Superseded overview requests are cancelled while
+late completions are ignored, preventing an older response from replacing a
+newer refresh result.
 The API now covers three live public sources; the first milestone also targets REST APIs,
 dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md). A provider-neutral

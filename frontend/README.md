@@ -15,7 +15,9 @@ separate source status and freshness rather than combining incompatible
 populations, entities, or reporting years into a synthetic KPI. Each failed
 card can retry only its own source without reloading healthy cards; the overview
 also retains an explicit refresh-all action. Keyboard focus moves to the settled
-source card after an individual retry.
+source card after an individual retry. Refreshing cancels requests that remain
+pending and ignores any superseded completion that arrives after the newer
+source result.
 
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared
@@ -71,4 +73,6 @@ manual assistive-technology testing.
 
 Component coverage also verifies that an unavailable CDC measure catalog
 replaces the county loading state with one actionable error and retries the
-catalog request before any county query is attempted.
+catalog request before any county query is attempted. Overview coverage forces
+an older request to settle after refresh and verifies that it cannot replace the
+current source card.

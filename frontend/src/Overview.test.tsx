@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,16 @@ vi.mock("./api", () => ({
 const mockedCms = vi.mocked(fetchHospitalIngestionHealth);
 const mockedCdc = vi.mocked(fetchMeasureCatalog);
 const mockedFda = vi.mocked(fetchDrugRecalls);
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
 
 describe("cross-source overview", () => {
   beforeEach(() => {
@@ -124,5 +134,33 @@ describe("cross-source overview", () => {
     expect(mockedCms).toHaveBeenCalledTimes(2);
     expect(mockedCdc).toHaveBeenCalledTimes(1);
     expect(mockedFda).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores an older source response that settles after refresh", async () => {
+    const user = userEvent.setup();
+    const initialCatalog = deferred<Awaited<ReturnType<typeof fetchMeasureCatalog>>>();
+    let initialSignal: AbortSignal | undefined;
+    mockedCdc.mockImplementationOnce((signal) => {
+      initialSignal = signal;
+      return initialCatalog.promise;
+    });
+    render(<Overview onNavigate={vi.fn()} />);
+
+    expect(await screen.findByText("5,432")).toBeVisible();
+    expect(screen.getByText("17,832 reports")).toBeVisible();
+    expect(mockedCdc).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Refresh all sources" }));
+    expect(await screen.findByText("40 measures")).toBeVisible();
+    expect(mockedCdc).toHaveBeenCalledTimes(2);
+    expect(initialSignal?.aborted).toBe(true);
+
+    await act(() => {
+      initialCatalog.reject(new Error("late response from the superseded request"));
+      return Promise.resolve();
+    });
+
+    expect(screen.getByText("40 measures")).toBeVisible();
+    expect(screen.queryByText("Source temporarily unavailable")).not.toBeInTheDocument();
   });
 });
