@@ -14,7 +14,8 @@ unavailable source does not hide the others. The cards intentionally present
 separate source status and freshness rather than combining incompatible
 populations, entities, or reporting years into a synthetic KPI. Each failed
 card can retry only its own source without reloading healthy cards; the overview
-also retains an explicit refresh-all action.
+also retains an explicit refresh-all action. Keyboard focus moves to the settled
+source card after an individual retry.
 
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared

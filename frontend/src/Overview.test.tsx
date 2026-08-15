@@ -118,7 +118,9 @@ describe("cross-source overview", () => {
 
     await user.click(screen.getByRole("button", { name: "Retry CMS" }));
 
-    expect(await screen.findByText("5,432")).toBeVisible();
+    const recoveredMetric = await screen.findByText("5,432");
+    expect(recoveredMetric).toBeVisible();
+    expect(recoveredMetric.closest("article")).toHaveFocus();
     expect(mockedCms).toHaveBeenCalledTimes(2);
     expect(mockedCdc).toHaveBeenCalledTimes(1);
     expect(mockedFda).toHaveBeenCalledTimes(1);

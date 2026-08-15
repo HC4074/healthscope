@@ -183,12 +183,16 @@ test("recovers one failed overview source without reloading healthy sources", as
       response.status() === 200,
   );
   allowCatalogRecovery = true;
-  await page.getByRole("button", { name: "Retry CDC" }).click();
+  await page.getByRole("button", { name: "Retry CDC" }).focus();
+  await page.keyboard.press("Enter");
   const recoveredCatalogResponse = await recoveredCatalogPromise;
   const recoveredCatalog = (await recoveredCatalogResponse.json()) as MeasureCatalog;
   await expect(
     page.getByText(`${recoveredCatalog.total.toLocaleString("en-US")} measures`),
   ).toBeVisible();
+  await expect(
+    page.locator("article.source-overview-card").filter({ hasText: "Centers for Disease Control" }),
+  ).toBeFocused();
   expect(requestCounts).toEqual({
     cms: settledCounts.cms,
     cdc: settledCounts.cdc + 1,
