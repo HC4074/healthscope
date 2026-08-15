@@ -103,12 +103,24 @@ describe("cross-source overview", () => {
     expect(onNavigate).toHaveBeenCalledWith({ view: "recalls", offset: 0 });
   });
 
-  it("keeps healthy sources visible when one upstream source fails", async () => {
+  it("retries one failed source without reloading healthy cards", async () => {
+    const user = userEvent.setup();
     mockedCms.mockRejectedValueOnce(new Error("database unavailable"));
     render(<Overview onNavigate={vi.fn()} />);
 
     expect(await screen.findByText("Source temporarily unavailable")).toBeVisible();
     expect(screen.getByText("40 measures")).toBeVisible();
     expect(screen.getByText("17,832 reports")).toBeVisible();
+
+    expect(mockedCms).toHaveBeenCalledTimes(1);
+    expect(mockedCdc).toHaveBeenCalledTimes(1);
+    expect(mockedFda).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Retry CMS" }));
+
+    expect(await screen.findByText("5,432")).toBeVisible();
+    expect(mockedCms).toHaveBeenCalledTimes(2);
+    expect(mockedCdc).toHaveBeenCalledTimes(1);
+    expect(mockedFda).toHaveBeenCalledTimes(1);
   });
 });

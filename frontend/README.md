@@ -12,7 +12,9 @@ prominent medical-use disclaimers. It contains no bundled healthcare dataset.
 CDC measure catalog, and a bounded FDA recall query independently, so one
 unavailable source does not hide the others. The cards intentionally present
 separate source status and freshness rather than combining incompatible
-populations, entities, or reporting years into a synthetic KPI.
+populations, entities, or reporting years into a synthetic KPI. Each failed
+card can retry only its own source without reloading healthy cards; the overview
+also retains an explicit refresh-all action.
 
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared

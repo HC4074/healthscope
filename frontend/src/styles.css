@@ -978,6 +978,11 @@ footer p {
   margin-top: auto;
 }
 
+.source-overview-retry {
+  align-self: flex-start;
+  margin-top: 0.8rem;
+}
+
 .recall-hero h1 {
   max-width: 900px;
 }

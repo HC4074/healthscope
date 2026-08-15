@@ -132,6 +132,72 @@ test("summarizes all live sources in an accessible overview", async ({ baseURL, 
   await expectBrowserClean(page, browserFailures);
 });
 
+test("recovers one failed overview source without reloading healthy sources", async ({ page }) => {
+  await watchCsp(page);
+  const requestCounts = { cms: 0, cdc: 0, fda: 0 };
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/hospitals/ingestion/health") {
+      requestCounts.cms += 1;
+    } else if (path === "/api/v1/community-health/measures") {
+      requestCounts.cdc += 1;
+    } else if (path === "/api/v1/drug-recalls") {
+      requestCounts.fda += 1;
+    }
+  });
+
+  let allowCatalogRecovery = false;
+  await page.route("**/api/v1/community-health/measures", async (route) => {
+    if (!allowCatalogRecovery) {
+      await route.fulfill({
+        status: 502,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Controlled CDC outage for release verification." }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto("/overview");
+  await expect(page.getByText("Controlled CDC outage for release verification.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry CDC" })).toBeVisible();
+  await expect
+    .poll(() => requestCounts.cms > 0 && requestCounts.cdc > 0 && requestCounts.fda > 0)
+    .toBe(true);
+  const settledCounts = { ...requestCounts };
+  await expectAccessible(page);
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+  await expectAccessible(page);
+
+  const recoveredCatalogPromise = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/v1/community-health/measures" &&
+      response.status() === 200,
+  );
+  allowCatalogRecovery = true;
+  await page.getByRole("button", { name: "Retry CDC" }).click();
+  const recoveredCatalogResponse = await recoveredCatalogPromise;
+  const recoveredCatalog = (await recoveredCatalogResponse.json()) as MeasureCatalog;
+  await expect(
+    page.getByText(`${recoveredCatalog.total.toLocaleString("en-US")} measures`),
+  ).toBeVisible();
+  expect(requestCounts).toEqual({
+    cms: settledCounts.cms,
+    cdc: settledCounts.cdc + 1,
+    fda: settledCounts.fda,
+  });
+  await expectAccessible(page);
+  expect(await page.evaluate(() => window.__healthscopeCspViolations)).toEqual([]);
+});
+
 test.describe("mobile navigation", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 

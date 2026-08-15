@@ -71,13 +71,24 @@ function LoadingCard({ source }: { source: string }) {
   );
 }
 
-function ErrorCard({ source, message }: { source: string; message: string }) {
+function ErrorCard({
+  source,
+  message,
+  onRetry,
+}: {
+  source: string;
+  message: string;
+  onRetry: () => void;
+}) {
   return (
     <article className="source-overview-card source-overview-error">
       <p className="source-overview-agency">{source}</p>
       <h2>Source temporarily unavailable</h2>
       <p>{message}</p>
       <span className="source-status source-status-warning">Refresh needed</span>
+      <button className="text-button source-overview-retry" type="button" onClick={onRetry}>
+        Retry {source}
+      </button>
     </article>
   );
 }
@@ -177,7 +188,9 @@ function FdaCard({ recalls, onNavigate }: { recalls: DrugRecallPage } & Overview
 }
 
 export default function Overview({ onNavigate }: OverviewProps) {
-  const [attempt, setAttempt] = useState(0);
+  const [cmsAttempt, setCmsAttempt] = useState(0);
+  const [cdcAttempt, setCdcAttempt] = useState(0);
+  const [fdaAttempt, setFdaAttempt] = useState(0);
   const [cms, setCms] = useState<SourceState<HospitalIngestionHealth>>({ status: "loading" });
   const [cdc, setCdc] = useState<SourceState<CommunityHealthMeasureCatalog>>({ status: "loading" });
   const [fda, setFda] = useState<SourceState<DrugRecallPage>>({ status: "loading" });
@@ -191,6 +204,11 @@ export default function Overview({ onNavigate }: OverviewProps) {
           setCms({ status: "error", message: messageFor(error) });
         }
       });
+    return () => controller.abort();
+  }, [cmsAttempt]);
+
+  useEffect(() => {
+    const controller = new AbortController();
     void fetchMeasureCatalog(controller.signal)
       .then((data) => setCdc({ status: "success", data }))
       .catch((error: unknown) => {
@@ -198,6 +216,11 @@ export default function Overview({ onNavigate }: OverviewProps) {
           setCdc({ status: "error", message: messageFor(error) });
         }
       });
+    return () => controller.abort();
+  }, [cdcAttempt]);
+
+  useEffect(() => {
+    const controller = new AbortController();
     void fetchDrugRecalls({ limit: 1, offset: 0, signal: controller.signal })
       .then((data) => setFda({ status: "success", data }))
       .catch((error: unknown) => {
@@ -206,13 +229,30 @@ export default function Overview({ onNavigate }: OverviewProps) {
         }
       });
     return () => controller.abort();
-  }, [attempt]);
+  }, [fdaAttempt]);
+
+  function retryCms() {
+    setCms({ status: "loading" });
+    setCmsAttempt((value) => value + 1);
+  }
+
+  function retryCdc() {
+    setCdc({ status: "loading" });
+    setCdcAttempt((value) => value + 1);
+  }
+
+  function retryFda() {
+    setFda({ status: "loading" });
+    setFdaAttempt((value) => value + 1);
+  }
 
   function retryAll() {
     setCms({ status: "loading" });
     setCdc({ status: "loading" });
     setFda({ status: "loading" });
-    setAttempt((value) => value + 1);
+    setCmsAttempt((value) => value + 1);
+    setCdcAttempt((value) => value + 1);
+    setFdaAttempt((value) => value + 1);
   }
 
   return (
@@ -247,15 +287,21 @@ export default function Overview({ onNavigate }: OverviewProps) {
         </div>
         <div className="source-overview-grid">
           {cms.status === "loading" && <LoadingCard source="CMS" />}
-          {cms.status === "error" && <ErrorCard source="CMS" message={cms.message} />}
+          {cms.status === "error" && (
+            <ErrorCard source="CMS" message={cms.message} onRetry={retryCms} />
+          )}
           {cms.status === "success" && <CmsCard health={cms.data} />}
 
           {cdc.status === "loading" && <LoadingCard source="CDC" />}
-          {cdc.status === "error" && <ErrorCard source="CDC" message={cdc.message} />}
+          {cdc.status === "error" && (
+            <ErrorCard source="CDC" message={cdc.message} onRetry={retryCdc} />
+          )}
           {cdc.status === "success" && <CdcCard catalog={cdc.data} onNavigate={onNavigate} />}
 
           {fda.status === "loading" && <LoadingCard source="FDA" />}
-          {fda.status === "error" && <ErrorCard source="FDA" message={fda.message} />}
+          {fda.status === "error" && (
+            <ErrorCard source="FDA" message={fda.message} onRetry={retryFda} />
+          )}
           {fda.status === "success" && <FdaCard recalls={fda.data} onNavigate={onNavigate} />}
         </div>
       </section>
