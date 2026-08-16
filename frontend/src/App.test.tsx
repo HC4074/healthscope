@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -82,6 +82,16 @@ const countyPage: CountyHealthPage = {
 const mockedCatalog = vi.mocked(fetchMeasureCatalog);
 const mockedCounties = vi.mocked(fetchCountyHealth);
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
 describe("community health explorer", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/community-health");
@@ -138,6 +148,54 @@ describe("community health explorer", () => {
       ),
     );
     expect(window.location.search).toBe("?state=AL&measure=DIABETES&page=2");
+  });
+
+  it("ignores a superseded county failure after a newer filter succeeds", async () => {
+    const user = userEvent.setup();
+    const initialPage = deferred<CountyHealthPage>();
+    let initialSignal: AbortSignal | undefined;
+    mockedCounties.mockImplementationOnce((query) => {
+      initialSignal = query.signal;
+      return initialPage.promise;
+    });
+    mockedCounties.mockResolvedValueOnce({
+      ...countyPage,
+      state: "CA",
+      measure_id: "ACCESS2",
+      items: [
+        {
+          ...countyPage.items[0]!,
+          state: "CA",
+          state_name: "California",
+          county: "Alameda",
+          county_fips: "06001",
+          measure_id: "ACCESS2",
+          measure: "Current lack of health insurance among adults",
+        },
+      ],
+    });
+    render(<App />);
+
+    await waitFor(() => expect(mockedCounties).toHaveBeenCalledTimes(1));
+    await user.selectOptions(screen.getByLabelText("State"), "CA");
+    await user.selectOptions(screen.getByLabelText("Health measure"), "ACCESS2");
+    await user.click(screen.getByRole("button", { name: /Explore counties/ }));
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Current lack of health insurance among adults",
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Alameda County" })).toBeVisible();
+    expect(initialSignal?.aborted).toBe(true);
+
+    await act(() => {
+      initialPage.reject(new Error("late failure from the superseded county request"));
+      return Promise.resolve();
+    });
+
+    expect(screen.getByRole("rowheader", { name: "Alameda County" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("offers a retry when the county request fails", async () => {

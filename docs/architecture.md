@@ -68,7 +68,9 @@ application behavior, and storage can evolve independently.
 5. A typed, dependency-free browser routing boundary maps the explorers to
    `/community-health` and `/drug-recalls`. Only validated filter and page state
    is serialized, and `popstate` restores submitted queries without duplicating
-   or fabricating source data.
+   or fabricating source data. Filter, pagination, retry, and history changes
+   cancel pending requests and ignore abort-insensitive late completions, so an
+   older CDC or FDA response cannot overwrite the active route's result.
 6. `/overview` is the canonical dashboard landing route. It requests the CMS
    ingestion health contract, CDC measure catalog, and a one-record FDA page in
    parallel, isolates failures and retries by source, preserves keyboard focus

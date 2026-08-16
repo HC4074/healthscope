@@ -22,6 +22,9 @@ source result.
 Both explorers are directly linkable. Submitted filters and result pages are
 stored in `/community-health` or `/drug-recalls` query parameters, so shared
 links and browser back/forward navigation restore the same live-data view.
+Pending requests are cancelled when those queries change, and abort-insensitive
+late completions are ignored so an older response cannot replace the current
+filter, page, or history result.
 Recall pagination is bounded to openFDA's official 25,000-record skip ceiling;
 if a saved page falls beyond the changing live result set, the error or empty
 state can return to page one without dropping the submitted hazard filter.

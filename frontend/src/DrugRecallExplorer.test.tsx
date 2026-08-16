@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -58,6 +58,16 @@ if (!capturedRecall) {
 
 const mockedRecalls = vi.mocked(fetchDrugRecalls);
 const defaultRoute: RecallRoute = { view: "recalls", offset: 0 };
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
 
 function renderExplorer(
   route: RecallRoute = defaultRoute,
@@ -141,6 +151,40 @@ describe("drug recall explorer", () => {
       classification: "Class II",
       offset: 10,
     });
+  });
+
+  it("ignores a superseded FDA result after a newer page succeeds", async () => {
+    const initialPage = deferred<DrugRecallPage>();
+    let initialSignal: AbortSignal | undefined;
+    mockedRecalls.mockImplementationOnce((query) => {
+      initialSignal = query.signal;
+      return initialPage.promise;
+    });
+    mockedRecalls.mockResolvedValueOnce({
+      ...recallPage,
+      offset: 10,
+      items: [{ ...capturedRecall, recalling_firm: "Current page firm" }],
+    });
+    const { onNavigate, rerender } = renderExplorer();
+
+    expect(mockedRecalls).toHaveBeenCalledTimes(1);
+    rerender(
+      <DrugRecallExplorer
+        route={{ view: "recalls", offset: 10 }}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Current page firm" })).toBeVisible();
+    expect(initialSignal?.aborted).toBe(true);
+
+    await act(() => {
+      initialPage.resolve(recallPage);
+      return Promise.resolve();
+    });
+
+    expect(screen.getByRole("heading", { name: "Current page firm" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Chiesi USA, Inc." })).not.toBeInTheDocument();
   });
 
   it("moves focus to the results summary after keyboard pagination", async () => {

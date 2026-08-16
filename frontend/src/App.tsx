@@ -370,10 +370,14 @@ export default function App() {
       return;
     }
     const controller = new AbortController();
+    let isCurrent = true;
     let isPending = true;
     void fetchMeasureCatalog(controller.signal)
       .then((result) => {
         isPending = false;
+        if (!isCurrent) {
+          return;
+        }
         if (result.items.length === 0) {
           setCatalog({ status: "error", message: "CDC returned an empty measure catalog." });
           return;
@@ -398,11 +402,12 @@ export default function App() {
       })
       .catch((error: unknown) => {
         isPending = false;
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) {
           setCatalog({ status: "error", message: errorMessage(error) });
         }
       });
     return () => {
+      isCurrent = false;
       if (isPending) {
         controller.abort();
       }
@@ -414,6 +419,7 @@ export default function App() {
       return;
     }
     const controller = new AbortController();
+    let isCurrent = true;
     let isPending = true;
     void fetchCountyHealth({
       state: activeQuery.state,
@@ -424,15 +430,18 @@ export default function App() {
     })
       .then((result) => {
         isPending = false;
-        setCountyPage({ status: "success", data: result });
+        if (isCurrent) {
+          setCountyPage({ status: "success", data: result });
+        }
       })
       .catch((error: unknown) => {
         isPending = false;
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) {
           setCountyPage({ status: "error", message: errorMessage(error) });
         }
       });
     return () => {
+      isCurrent = false;
       if (isPending) {
         controller.abort();
       }
