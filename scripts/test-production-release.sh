@@ -4,9 +4,11 @@ set -Eeuo pipefail
 
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-healthscope-release-test}"
 export HEALTHSCOPE_HTTP_PORT="${HEALTHSCOPE_HTTP_PORT:-18080}"
+production_env_file="${HEALTHSCOPE_ENV_FILE:-.env.production}"
 
 compose=(
   docker compose
+  --env-file "${production_env_file}"
   --file compose.production.yaml
   --file compose.release-test.yaml
 )

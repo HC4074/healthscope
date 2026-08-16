@@ -59,7 +59,10 @@ Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. Production configuration now fails before startup,
 migration, or ingestion if debug is enabled, PostgreSQL is not configured, or a
-documented placeholder/default database credential remains. Production API
+documented placeholder/default database credential remains. Production Compose
+also requires both reviewed image references explicitly, and the deployment
+runbook loads them from the production env file during Compose interpolation so
+it cannot silently substitute locally built fallbacks. Production API
 responses include a validated `X-Request-ID`, and the API emits query-free
 structured completion events so operators can correlate monitor failures with
 container logs without recording request parameters. A scheduled compatibility

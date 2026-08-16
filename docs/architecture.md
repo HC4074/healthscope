@@ -134,7 +134,10 @@ healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,
 signed build provenance, and signed SPDX SBOM attestations bind each registry
 digest back to the exact workflow and repository revision; production can pull
-reviewed artifacts without rebuilding them on the host.
+reviewed artifacts without rebuilding them on the host. Production Compose
+requires both image references, and the runbook passes the production env file
+at Compose interpolation time so an omitted release tag cannot fall back to an
+unreviewed local build.
 
 A separate scheduled compatibility workflow runs a bounded, read-only sample
 through each production source client: one CMS hospital, the complete small CDC

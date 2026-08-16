@@ -24,6 +24,8 @@ application host.
   provider's equivalent secret injection.
 - Pin deployments to a reviewed commit or immutable image digest. Do not deploy
   a moving `latest` tag.
+- Set both production image variables explicitly. Production Compose rejects a
+  missing API or frontend image instead of silently building a local fallback.
 - Successful `main` builds publish separate API and frontend images to GHCR with
   a `sha-<full-commit-sha>` tag. Publishing starts only after the container-level
   production release checks pass. Each digest has signed GitHub build-provenance
@@ -94,11 +96,16 @@ From a clean checkout at the reviewed commit:
 cp .env.production.example .env.production
 # Edit .env.production with the managed database URL, both release image tags,
 # and optional FDA key.
-docker compose -f compose.production.yaml config --quiet
-docker compose -f compose.production.yaml pull
-docker compose -f compose.production.yaml up -d
-docker compose -f compose.production.yaml ps
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
+docker compose --env-file .env.production -f compose.production.yaml pull
+docker compose --env-file .env.production -f compose.production.yaml up -d
+docker compose --env-file .env.production -f compose.production.yaml ps
 ```
+
+`--env-file .env.production` is required here because Compose resolves image
+references before a container's `env_file` is applied. Omitting it can ignore
+the release tags stored in that file. Missing image variables now fail during
+`config`, before any build, pull, migration, or startup occurs.
 
 `migrate` must exit successfully before `api` starts, and `frontend` waits for
 the API readiness check. A migration failure leaves the new API unavailable
@@ -132,9 +139,11 @@ Run the same check from a Docker-equipped development host:
 
 ```bash
 cp .env.production.example .env.production
+export HEALTHSCOPE_API_IMAGE=healthscope-api:production
+export HEALTHSCOPE_FRONTEND_IMAGE=healthscope-frontend:production
 npm --prefix frontend ci
 (cd frontend && npx --no-install playwright install --with-deps chromium)
-docker compose -f compose.production.yaml build
+docker compose --env-file .env.production -f compose.production.yaml build
 bash scripts/test-production-release.sh
 ```
 
@@ -162,7 +171,7 @@ The ingestion-health probe is expected to return 503 before the first complete
 CMS snapshot. Initialize production once after migrations:
 
 ```bash
-docker compose -f compose.production.yaml --profile operations run --rm --no-deps ingest
+docker compose --env-file .env.production -f compose.production.yaml --profile operations run --rm --no-deps ingest
 curl --fail --show-error https://healthscope.example.com/api/v1/hospitals/ingestion/health
 ```
 
@@ -173,7 +182,7 @@ Schedule the same one-shot container daily. For a UTC cron host, a 06:00 UTC
 example is:
 
 ```cron
-0 6 * * * cd /srv/healthscope && docker compose -f compose.production.yaml --profile operations run --rm --no-deps ingest
+0 6 * * * cd /srv/healthscope && docker compose --env-file .env.production -f compose.production.yaml --profile operations run --rm --no-deps ingest
 ```
 
 Use the hosting provider's scheduled-job facility when possible. Inject the

@@ -50,10 +50,25 @@ jobs:
       - name: Validate production configuration
         run: |
           cp .env.production.example .env.production
-          docker compose -f compose.production.yaml config --quiet
+          if docker compose --env-file .env.production -f compose.production.yaml config --quiet 2>missing-api-image.log; then
+            echo "Production Compose accepted a missing API image." >&2
+            exit 1
+          fi
+          grep --quiet 'HEALTHSCOPE_API_IMAGE' missing-api-image.log
+
+          if HEALTHSCOPE_API_IMAGE=healthscope-api:production \
+            docker compose --env-file .env.production -f compose.production.yaml config --quiet 2>missing-frontend-image.log; then
+            echo "Production Compose accepted a missing frontend image." >&2
+            exit 1
+          fi
+          grep --quiet 'HEALTHSCOPE_FRONTEND_IMAGE' missing-frontend-image.log
+
+          printf '\nHEALTHSCOPE_API_IMAGE=healthscope-api:production\n' >> .env.production
+          printf 'HEALTHSCOPE_FRONTEND_IMAGE=healthscope-frontend:production\n' >> .env.production
+          docker compose --env-file .env.production -f compose.production.yaml config --quiet
 
       - name: Build production images
-        run: docker compose -f compose.production.yaml build
+        run: docker compose --env-file .env.production -f compose.production.yaml build
 
       - name: Exercise production release contract
         run: bash scripts/test-production-release.sh
