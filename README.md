@@ -46,8 +46,11 @@ dashboard visualizations, and architecture documentation. See the current
 [architecture notes](docs/architecture.md). A provider-neutral
 [production deployment runbook](docs/deployment.md) defines the container
 release, migration, readiness, first-ingestion, scheduling, monitoring, backup,
-and rollback contract. Deployment CI boots those production images with an
-ephemeral empty PostgreSQL instance and exercises routing, migrations,
+and rollback contract. A provider-neutral
+[production launch checklist](docs/launch-checklist.md) records the hosting,
+database, ownership, budget, alerting, and restore evidence required for a
+go/no-go decision before credentials are used. Deployment CI boots those
+production images with an ephemeral empty PostgreSQL instance and exercises routing, migrations,
 readiness failure, recovery behavior, and Chromium critical journeys through
 the overview, live CDC county data, and live FDA recalls at desktop and mobile
 viewports. The browser checks submit live CDC and FDA filters, restore them with

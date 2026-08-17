@@ -152,7 +152,10 @@ API plus database credentials. Census population and demographic context remains
 a natural complement to the county explorer, but Census data queries now require
 an API key. The clearly disclaimed FDA drug recall view and cross-source landing
 journey are now backed by typed live API contracts. The next unblocked milestone
-increment is applying the production contract to a selected host, managed
-PostgreSQL instance, scheduler, and monitor. That provisioning remains blocked
-until a provider and credentials are supplied; Census enrichment remains queued
-until a Census API key is configured.
+increment is completing the provider-neutral
+[production launch checklist](launch-checklist.md), then applying the production
+contract to the selected host, managed PostgreSQL instance, scheduler, and
+monitor. The checklist makes provider capabilities, ownership, budget, secrets,
+backup restoration, and go/no-go evidence explicit. Provisioning remains blocked
+until those decisions and credentials are supplied; Census enrichment remains
+queued until a Census API key is configured.

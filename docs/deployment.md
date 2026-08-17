@@ -5,6 +5,12 @@ managed PostgreSQL database. The production Compose file does not run a local
 database: production data must live in a backed-up managed service outside the
 application host.
 
+Before provisioning, complete the
+[production launch decision checklist](launch-checklist.md). It defines the
+provider hard gates, required ownership and configuration inputs, ordered
+acceptance checks, and evidence that must be retained. This runbook begins only
+after those decisions are authorized; it does not choose a provider or plan.
+
 ## Release contract
 
 - Terminate TLS at the hosting platform or a reverse proxy in front of port 80.
