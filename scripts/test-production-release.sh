@@ -83,8 +83,11 @@ expect_configuration_failure() {
 expect_configuration_failure "debug" -e HEALTHSCOPE_DEBUG=true
 expect_configuration_failure "database-backend" -e HEALTHSCOPE_DATABASE_URL=sqlite:///healthscope.db
 expect_configuration_failure \
+  "database-tls" \
+  -e HEALTHSCOPE_DATABASE_URL=postgresql+psycopg://healthscope:unique-release-value@database/healthscope
+expect_configuration_failure \
   "database-placeholder" \
-  -e HEALTHSCOPE_DATABASE_URL=postgresql+psycopg://healthscope:replace-with-a-secret@db.internal/healthscope
+  -e HEALTHSCOPE_DATABASE_URL=postgresql+psycopg://healthscope:replace-with-a-secret@db.internal/healthscope?sslmode=require
 
 "${compose[@]}" up --detach --wait --wait-timeout 180 database api frontend
 
@@ -263,7 +266,7 @@ PY
 "${compose[@]}" start database
 wait_for_status 200 "${base_url}/api/v1/ready" "${response_dir}/recovered.json"
 
-if HEALTHSCOPE_RELEASE_TEST_DATABASE_URL="postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:1/healthscope_release_test" \
+if HEALTHSCOPE_RELEASE_TEST_DATABASE_URL="postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:1/healthscope_release_test?sslmode=require" \
   "${compose[@]}" run --rm --no-deps migrate >"${response_dir}/migration-failure.log" 2>&1; then
   echo "Migration unexpectedly succeeded with an unreachable database." >&2
   exit 1

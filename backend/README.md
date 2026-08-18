@@ -122,7 +122,8 @@ migrations automatically when the API container starts.
 
 When `HEALTHSCOPE_ENVIRONMENT=production`, settings validation fails before API
 startup, migration, or ingestion if debug mode is enabled, the database URL is
-not PostgreSQL, or it retains a documented placeholder/default database host or
+not PostgreSQL, does not require TLS with `sslmode=require`, `verify-ca`, or
+`verify-full`, or retains a documented placeholder/default database host or
 password. Development and test environments keep SQLite support for isolated
 tests. See the production deployment runbook for the managed-database contract.
 

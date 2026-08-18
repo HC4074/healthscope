@@ -19,6 +19,7 @@ UNSAFE_PRODUCTION_DATABASE_PASSWORDS = frozenset(
         "secret",
     }
 )
+SECURE_PRODUCTION_DATABASE_SSL_MODES = frozenset({"require", "verify-ca", "verify-full"})
 
 
 class Settings(BaseSettings):
@@ -73,6 +74,15 @@ class Settings(BaseSettings):
 
         if database_url.get_backend_name() != "postgresql":
             raise ValueError("HEALTHSCOPE_DATABASE_URL must use PostgreSQL in production")
+
+        ssl_mode = database_url.query.get("sslmode")
+        if not isinstance(ssl_mode, str) or ssl_mode.lower() not in (
+            SECURE_PRODUCTION_DATABASE_SSL_MODES
+        ):
+            raise ValueError(
+                "HEALTHSCOPE_DATABASE_URL must require TLS with sslmode=require, "
+                "sslmode=verify-ca, or sslmode=verify-full in production"
+            )
 
         password = database_url.password
         if (

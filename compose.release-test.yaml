@@ -5,6 +5,16 @@ name: healthscope-release-test
 services:
   database:
     image: postgres:17-alpine
+    command:
+      - sh
+      - -c
+      - >-
+        openssl req -new -x509 -days 1 -nodes -out /tmp/server.crt
+        -keyout /tmp/server.key -subj /CN=database >/dev/null 2>&1 &&
+        chown postgres:postgres /tmp/server.crt /tmp/server.key &&
+        chmod 600 /tmp/server.key &&
+        exec docker-entrypoint.sh postgres -c ssl=on
+        -c ssl_cert_file=/tmp/server.crt -c ssl_key_file=/tmp/server.key
     environment:
       POSTGRES_DB: healthscope_release_test
       POSTGRES_USER: healthscope_release_test
@@ -19,14 +29,14 @@ services:
 
   migrate:
     environment:
-      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test}
+      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test?sslmode=require}
     depends_on:
       database:
         condition: service_healthy
 
   api:
     environment:
-      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test}
+      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test?sslmode=require}
     depends_on:
       database:
         condition: service_healthy
@@ -35,7 +45,7 @@ services:
 
   ingest:
     environment:
-      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test}
+      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test?sslmode=require}
     depends_on:
       database:
         condition: service_healthy
@@ -44,7 +54,7 @@ services:
 
   verify-restore:
     environment:
-      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test}
+      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test?sslmode=require}
     depends_on:
       database:
         condition: service_healthy

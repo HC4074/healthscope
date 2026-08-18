@@ -94,7 +94,8 @@ with managed PostgreSQL, exposes only Nginx, runs migrations as a required
 one-shot service, and gates traffic on a database-backed API readiness probe.
 Shared settings validation makes API startup, migrations, and ingestion fail
 before connecting when production enables debug mode, selects a non-PostgreSQL
-database, or retains a documented placeholder/default database credential.
+database, omits a TLS-required PostgreSQL SSL mode, or retains a documented
+placeholder/default database credential.
 Non-production SQLite support remains available for isolated tests.
 The separate liveness probe does not query dependencies. The deployment runbook
 defines first ingestion, external daily scheduling, monitoring, backups, and a

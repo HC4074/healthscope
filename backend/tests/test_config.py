@@ -7,6 +7,7 @@ from healthscope.config import Settings
 
 PRODUCTION_DATABASE_URL = (
     "postgresql+psycopg://healthscope:unique-production-value@db.internal:5432/healthscope"
+    "?sslmode=require"
 )
 
 
@@ -18,6 +19,18 @@ def test_production_settings_accept_safe_postgresql_configuration() -> None:
     assert settings.database_url == PRODUCTION_DATABASE_URL
 
 
+@pytest.mark.parametrize("ssl_mode", ["require", "verify-ca", "verify-full"])
+def test_production_settings_accept_tls_required_postgresql_modes(ssl_mode: str) -> None:
+    database_url = (
+        "postgresql+psycopg://healthscope:unique-production-value@db.internal/healthscope"
+        f"?sslmode={ssl_mode}"
+    )
+
+    settings = Settings(environment="production", database_url=database_url)
+
+    assert settings.database_url == database_url
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
@@ -26,7 +39,35 @@ def test_production_settings_accept_safe_postgresql_configuration() -> None:
         (
             {
                 "database_url": (
+                    "postgresql+psycopg://healthscope:unique-production-value@db.internal/"
+                    "healthscope"
+                )
+            },
+            "must require TLS",
+        ),
+        (
+            {
+                "database_url": (
+                    "postgresql+psycopg://healthscope:unique-production-value@db.internal/"
+                    "healthscope?sslmode=prefer"
+                )
+            },
+            "must require TLS",
+        ),
+        (
+            {
+                "database_url": (
+                    "postgresql+psycopg://healthscope:unique-production-value@db.internal/"
+                    "healthscope?sslmode=require&sslmode=disable"
+                )
+            },
+            "must require TLS",
+        ),
+        (
+            {
+                "database_url": (
                     "postgresql+psycopg://healthscope:healthscope-local-only@db.internal/healthscope"
+                    "?sslmode=require"
                 )
             },
             "unsafe placeholder or default password",
@@ -35,6 +76,7 @@ def test_production_settings_accept_safe_postgresql_configuration() -> None:
             {
                 "database_url": (
                     "postgresql+psycopg://healthscope:safe-value@database.example.com/healthscope"
+                    "?sslmode=require"
                 )
             },
             "placeholder database host",
@@ -64,6 +106,7 @@ def test_production_validation_error_hides_database_credential() -> None:
             environment="production",
             database_url=(
                 f"postgresql+psycopg://healthscope:{secret_value}@db.internal/healthscope"
+                "?sslmode=require"
             ),
         )
 

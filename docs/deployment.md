@@ -21,8 +21,9 @@ after those decisions are authorized; it does not choose a provider or plan.
 - Use a managed PostgreSQL connection that requires TLS. Never reuse the local
   `healthscope-local-only` password.
 - Production settings fail before startup, migration, or ingestion when debug is
-  enabled, the database URL is not PostgreSQL, or a documented placeholder or
-  default database credential remains.
+  enabled, the database URL is not PostgreSQL, the URL does not set
+  `sslmode=require`, `verify-ca`, or `verify-full`, or a documented placeholder
+  or default database credential remains.
 - Apply Alembic migrations before the API accepts traffic. The API depends on a
   successful one-shot `migrate` container.
 - Persist no secrets in Git, container images, command history, or scheduler
@@ -120,8 +121,10 @@ instead of serving against an older schema.
 The settings guard is intentionally tied to
 `HEALTHSCOPE_ENVIRONMENT=production`, so SQLite remains available for isolated
 tests while every production entry point shares the stricter PostgreSQL and
-placeholder checks. A rejected setting is reported on standard error before a
-database connection is attempted.
+TLS/placeholder checks. Permissive PostgreSQL modes such as `prefer`, `allow`,
+and `disable` are rejected because they do not guarantee transport encryption.
+A rejected setting is reported on standard error before a database connection
+is attempted.
 
 Verify process liveness, database readiness, and the browser entry point through
 the public TLS URL:
@@ -139,8 +142,10 @@ returns 503 when PostgreSQL cannot be reached and is the routing health check.
 
 Deployment CI builds the production images and runs the production Compose file
 with `compose.release-test.yaml`. The overlay supplies an ephemeral PostgreSQL
-instance containing only empty migrated tables; it never loads or fabricates
-healthcare records. Only a successful push build advances to GHCR publication.
+instance with a short-lived self-signed transport certificate and only empty
+migrated tables; it never loads or fabricates healthcare records. This keeps
+the release exercise on the same TLS-required database path as production.
+Only a successful push build advances to GHCR publication.
 Run the same check from a Docker-equipped development host:
 
 ```bash
@@ -153,8 +158,9 @@ docker compose --env-file .env.production -f compose.production.yaml build
 bash scripts/test-production-release.sh
 ```
 
-The check verifies unsafe production settings fail before startup, migration
-ordering, PostgreSQL overlap rejection, private API/database networking,
+The check verifies unsafe production settings, including a PostgreSQL URL that
+does not require TLS, fail before startup; it also verifies migration ordering,
+PostgreSQL overlap rejection, private API/database networking,
 same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
 Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
