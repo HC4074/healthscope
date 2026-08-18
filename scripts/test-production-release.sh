@@ -11,6 +11,7 @@ compose=(
   --env-file "${production_env_file}"
   --file compose.production.yaml
   --file compose.release-test.yaml
+  --profile operations
 )
 base_url="http://127.0.0.1:${HEALTHSCOPE_HTTP_PORT}"
 response_dir="$(mktemp -d)"
