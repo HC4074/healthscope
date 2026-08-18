@@ -103,8 +103,9 @@ ticket. Stop at the first failure and follow the runbook's rollback guidance.
 - [ ] Scheduling: the daily CMS ingestion runs at the approved UTC time,
   overlap prevention is enabled, and a forced nonzero exit triggers an alert.
 - [ ] Backup restore: a production backup is restored into an isolated database,
-  migrations and row/completion integrity are verified there, and the evidence
-  is retained without exposing healthcare records or credentials.
+  `healthscope-verify-restore` confirms the backed-up migration revision plus
+  row/completion/run integrity before any migration or ingestion is run there,
+  and aggregate evidence is retained without exposing records or credentials.
 - [ ] Recovery: the previous matching image pair is redeployed in a controlled
   exercise without an automatic Alembic downgrade, then the approved release is
   restored.

@@ -62,6 +62,7 @@ assert services["api"]["depends_on"]["migrate"]["condition"] == "service_complet
 assert services["api"]["depends_on"]["database"]["condition"] == "service_healthy"
 assert services["frontend"]["depends_on"]["api"]["condition"] == "service_healthy"
 assert "--no-access-log" in services["api"]["command"]
+assert services["verify-restore"]["command"] == ["healthscope-verify-restore"]
 assert not services["api"].get("ports")
 assert not services["database"].get("ports")
 assert str(services["frontend"]["ports"][0]["published"]) == sys.argv[2]
@@ -211,6 +212,13 @@ HEALTHSCOPE_E2E_BASE_URL="${base_url}" npm --prefix frontend run test:e2e
 
 current_revision="$("${compose[@]}" exec --no-TTY api alembic current)"
 grep --quiet '(head)' <<<"${current_revision}"
+
+if "${compose[@]}" run --rm --no-deps verify-restore \
+  >"${response_dir}/empty-restore.log" 2>&1; then
+  echo "Restore verification unexpectedly accepted an empty migrated database." >&2
+  exit 1
+fi
+grep --quiet 'No completed hospital snapshot' "${response_dir}/empty-restore.log"
 
 "${compose[@]}" stop database
 wait_for_status 503 "${base_url}/api/v1/ready" "${response_dir}/not-ready.json"

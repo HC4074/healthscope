@@ -68,3 +68,9 @@ services:
         condition: service_completed_successfully
     restart: "no"
     profiles: ["operations"]
+
+  verify-restore:
+    <<: *api-service
+    command: ["healthscope-verify-restore"]
+    restart: "no"
+    profiles: ["operations"]

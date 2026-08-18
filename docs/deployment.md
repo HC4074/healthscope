@@ -214,9 +214,45 @@ outside API startup so restarts never trigger unscheduled data writes.
 - Alert on scheduler failures and keep the structured ingestion output with the
   release identifier.
 - Enable managed PostgreSQL automated backups and point-in-time recovery. Test a
-  restore before launch and at regular intervals afterward.
+  restore before launch and at regular intervals afterward using the procedure
+  below.
 - Monitor host disk, memory, certificate expiry, HTTP 5xx rate, and upstream CDC,
   CMS, and FDA failures separately.
+
+## Validate a restored backup
+
+Restore the selected production backup into a separate, non-public database.
+Never point this procedure at production, and do not run migrations or ingestion
+against the restored copy before validation; either action would change the
+evidence being tested. Prefer a temporary read-only database credential scoped
+to the restored database.
+
+Create an ignored, owner-readable `.env.restore` through the platform secret
+manager or deployment host. It must select the reviewed API image, set
+`HEALTHSCOPE_ENVIRONMENT=production`, and set `HEALTHSCOPE_DATABASE_URL` to the
+isolated restored PostgreSQL database with TLS required. Then run only the
+verifier service:
+
+```bash
+HEALTHSCOPE_ENV_FILE=.env.restore \
+  docker compose --env-file .env.restore -f compose.production.yaml \
+  run --rm --no-deps verify-restore
+```
+
+The verifier performs only database reads. It requires the restored Alembic
+revision to equal the release head, validates the newest completion marker
+against the exact CMS snapshot row and state totals, and requires a matching
+successful ingestion run with equal expected, fetched, and upserted counts. It
+prints aggregate JSON evidence without facility records or connection details
+and exits nonzero on any mismatch.
+
+Compare the returned revision, dataset ID, snapshot retrieval and completion
+timestamps, record count, state count, ingestion run ID, and finish timestamp
+with the retained production ingestion evidence for that backup. Record the
+restore identifier, target release image digest, command output, restore
+duration, and comparison result in the private launch ticket. Delete the
+isolated database and temporary credential only after evidence has been retained
+according to policy.
 
 ## Rollback
 

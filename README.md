@@ -28,6 +28,7 @@ and newest-first live FDA drug recall enforcement reports,
 versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
 monitor-ready health checks, an explicit full-dataset ingestion command,
+read-only restored-database integrity verification,
 automated backend quality checks, a PostgreSQL development container, and a
 responsive React community-health and drug-recall explorers. The dashboard
 discovers its measure filters from the live CDC catalog, presents paginated
@@ -74,6 +75,11 @@ day, catching upstream schema drift without writing healthcare records.
 The public Nginx boundary also applies a restrictive same-origin content
 security policy, browser hardening headers, revalidated SPA entry documents,
 and immutable caching for content-hashed assets.
+
+The packaged restore verifier checks an isolated restored database against the
+release migration head, newest CMS completion marker, exact snapshot row and
+state totals, and matching successful ingestion counts. It emits only aggregate
+operational evidence and never writes healthcare records.
 
 ## Quick start
 

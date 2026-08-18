@@ -145,6 +145,13 @@ measure catalog, and one newest FDA recall. It writes no database records and is
 not a substitute for deployed ingestion monitoring; it detects upstream schema
 or validation drift even while production provisioning remains credential-gated.
 
+Backup exercises use the same reviewed API image through a separate read-only
+`healthscope-verify-restore` process. It checks the restored migration revision,
+newest CMS completion and exact retrieval batch, geographic totals, and matching
+successful ingestion counts without migrating, ingesting, or returning facility
+records. This turns restore integrity into a reproducible release contract while
+keeping backup creation and restoration with the managed PostgreSQL provider.
+
 ## Next boundary
 
 Hospital scheduling remains separate from API startup and requires a deployed

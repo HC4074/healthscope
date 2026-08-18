@@ -41,3 +41,10 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+
+  verify-restore:
+    environment:
+      HEALTHSCOPE_DATABASE_URL: ${HEALTHSCOPE_RELEASE_TEST_DATABASE_URL:-postgresql+psycopg://healthscope_release_test:healthscope-release-test-only@database:5432/healthscope_release_test}
+    depends_on:
+      database:
+        condition: service_healthy

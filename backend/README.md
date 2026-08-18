@@ -173,6 +173,24 @@ timeouts and HTTP failures use bounded exponential retries; configure them with
 `HEALTHSCOPE_CMS_INGESTION_MAX_ATTEMPTS` (default 3) and
 `HEALTHSCOPE_CMS_INGESTION_RETRY_DELAY_SECONDS` (default 1).
 
+## Restored database verification
+
+Run the packaged read-only verifier against an isolated restored database before
+launch and after every restore exercise:
+
+```bash
+healthscope-verify-restore
+```
+
+The command requires the configured database to be at this release's exact
+Alembic head. It validates the newest CMS completion marker against rows from
+the same retrieval batch and state totals, then requires a matching successful
+ingestion run whose expected, fetched, and upserted counts all equal the
+snapshot count. Successful output contains only the schema revision, dataset
+ID, retrieval and completion timestamps, aggregate counts, and run ID. It does
+not return hospital records. Any missing or inconsistent evidence exits with
+status 1 and structured JSON on standard error.
+
 ## Quality checks
 
 ```bash
