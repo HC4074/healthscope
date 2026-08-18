@@ -167,6 +167,10 @@ detail. A terminated process remains in `started` state so monitoring can detect
 an abandoned run. The command prints a JSON summary containing the run ID plus
 expected, fetched, and upserted counts; a source, validation, or database failure
 returns exit code 1 with a JSON error on standard error.
+On PostgreSQL, the command acquires a dataset-scoped advisory lock before it
+opens the CMS client. A concurrent invocation performs no source requests and
+exits nonzero with `HospitalIngestionAlreadyRunningError`, allowing the
+scheduler to alert without duplicating a full ingestion.
 Configure page size with
 `HEALTHSCOPE_CMS_INGESTION_PAGE_SIZE` (1–100, default 100). Transient CMS
 timeouts and HTTP failures use bounded exponential retries; configure them with

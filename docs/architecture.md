@@ -28,7 +28,9 @@ application behavior, and storage can evolve independently.
    one UTC timestamp for the run, and commits idempotent pages independently so
    a failed run can be safely retried without coupling ETL to API startup. The
    command reuses one HTTP connection pool and retries transient CMS failures
-   with bounded exponential backoff.
+   with bounded exponential backoff. It holds a dataset-scoped PostgreSQL
+   advisory lock for the full run, so separate scheduler processes or hosts
+   cannot ingest the same source concurrently.
 6. Every ingestion has a durable run ID and lifecycle record. Page counters are
    committed with the corresponding snapshot rows, failures retain bounded
    error detail, and completion plus succeeded status are committed atomically.

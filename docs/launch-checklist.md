@@ -101,7 +101,8 @@ ticket. Stop at the first failure and follow the runbook's rollback guidance.
   a controlled failure reaches the named alert owner and can be correlated to
   logs without query strings or response bodies.
 - [ ] Scheduling: the daily CMS ingestion runs at the approved UTC time,
-  overlap prevention is enabled, and a forced nonzero exit triggers an alert.
+  the database-backed overlap rejection is exercised, and a forced nonzero exit
+  triggers an alert.
 - [ ] Backup restore: a production backup is restored into an isolated database,
   `healthscope-verify-restore` confirms the backed-up migration revision plus
   row/completion/run integrity before any migration or ingestion is run there,

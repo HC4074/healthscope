@@ -154,7 +154,8 @@ bash scripts/test-production-release.sh
 ```
 
 The check verifies unsafe production settings fail before startup, migration
-ordering, private API/database networking, same-origin Nginx routing,
+ordering, PostgreSQL overlap rejection, private API/database networking,
+same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
 Alembic head. It also checks the restrictive browser headers, `no-cache` SPA
 documents, and immutable content-hashed assets. Chromium then follows the
@@ -192,8 +193,10 @@ example is:
 ```
 
 Use the hosting provider's scheduled-job facility when possible. Inject the
-same release image and secrets as the API, prevent overlapping runs, retain
-standard output/error, and alert on a nonzero exit code. Scheduling stays
+same release image and secrets as the API. The command acquires a
+dataset-scoped PostgreSQL advisory lock before contacting CMS, so an overlapping
+invocation fails immediately and exits nonzero. Retain standard output/error
+and alert on any nonzero exit code. Scheduling stays
 outside API startup so restarts never trigger unscheduled data writes.
 
 ## Monitoring and backups

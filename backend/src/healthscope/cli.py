@@ -17,6 +17,10 @@ from healthscope.services.ingestion import (
     HospitalIngestionResult,
     ingest_hospital_snapshots,
 )
+from healthscope.services.ingestion_lock import (
+    HospitalIngestionAlreadyRunningError,
+    acquire_hospital_ingestion_lock,
+)
 
 
 async def _run_configured_ingestion(settings: Settings) -> HospitalIngestionResult:
@@ -25,15 +29,19 @@ async def _run_configured_ingestion(settings: Settings) -> HospitalIngestionResu
     engine = create_database_engine(settings.database_url)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     try:
-        async with get_cms_client(settings) as client:
-            return await ingest_hospital_snapshots(
-                client,
-                session_factory,
-                source_dataset_id=settings.cms_hospital_dataset_id,
-                page_size=settings.cms_ingestion_page_size,
-                max_attempts=settings.cms_ingestion_max_attempts,
-                retry_delay_seconds=settings.cms_ingestion_retry_delay_seconds,
-            )
+        with acquire_hospital_ingestion_lock(
+            engine,
+            source_dataset_id=settings.cms_hospital_dataset_id,
+        ):
+            async with get_cms_client(settings) as client:
+                return await ingest_hospital_snapshots(
+                    client,
+                    session_factory,
+                    source_dataset_id=settings.cms_hospital_dataset_id,
+                    page_size=settings.cms_ingestion_page_size,
+                    max_attempts=settings.cms_ingestion_max_attempts,
+                    retry_delay_seconds=settings.cms_ingestion_retry_delay_seconds,
+                )
     finally:
         engine.dispose()
 
@@ -54,6 +62,7 @@ def main() -> None:
         result = asyncio.run(_run_configured_ingestion(get_settings()))
     except (
         CMSClientError,
+        HospitalIngestionAlreadyRunningError,
         HospitalIngestionError,
         SQLAlchemyError,
         ValidationError,

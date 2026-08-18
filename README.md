@@ -27,7 +27,8 @@ endpoint, paginated live CDC PLACES county-health and measure-catalog endpoints,
 and newest-first live FDA drug recall enforcement reports,
 versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
-monitor-ready health checks, an explicit full-dataset ingestion command,
+monitor-ready health checks, an explicit full-dataset ingestion command with
+database-backed overlap prevention,
 read-only restored-database integrity verification,
 automated backend quality checks, a PostgreSQL development container, and a
 responsive React community-health and drug-recall explorers. The dashboard

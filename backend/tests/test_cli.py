@@ -10,6 +10,7 @@ import pytest
 from healthscope.cli import _run_configured_ingestion, main
 from healthscope.config import Settings
 from healthscope.services.ingestion import HospitalIngestionError, HospitalIngestionResult
+from healthscope.services.ingestion_lock import HospitalIngestionAlreadyRunningError
 
 RESULT = HospitalIngestionResult(
     run_id="11111111-1111-1111-1111-111111111111",
@@ -102,3 +103,32 @@ def test_ingestion_cli_reports_structured_failure(capsys: pytest.CaptureFixture[
         "error_type": "HospitalIngestionError",
         "message": "CMS page changed",
     }
+
+
+def test_ingestion_cli_reports_overlapping_run_without_starting_client(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    settings = Settings(environment="test")
+    engine = MagicMock()
+    client = MagicMock()
+
+    with (
+        patch("healthscope.cli.get_settings", return_value=settings),
+        patch("healthscope.cli.create_database_engine", return_value=engine),
+        patch(
+            "healthscope.cli.acquire_hospital_ingestion_lock",
+            side_effect=HospitalIngestionAlreadyRunningError("ingestion already running"),
+        ),
+        patch("healthscope.cli.get_cms_client", return_value=client),
+        pytest.raises(SystemExit) as exit_info,
+    ):
+        main()
+
+    assert exit_info.value.code == 1
+    assert json.loads(capsys.readouterr().err) == {
+        "status": "error",
+        "error_type": "HospitalIngestionAlreadyRunningError",
+        "message": "ingestion already running",
+    }
+    client.__aenter__.assert_not_called()
+    engine.dispose.assert_called_once_with()

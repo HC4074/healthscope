@@ -214,6 +214,33 @@ HEALTHSCOPE_E2E_BASE_URL="${base_url}" npm --prefix frontend run test:e2e
 current_revision="$("${compose[@]}" exec --no-TTY api alembic current)"
 grep --quiet '(head)' <<<"${current_revision}"
 
+"${compose[@]}" exec --no-TTY api python - <<'PY'
+from healthscope.config import get_settings
+from healthscope.database import create_database_engine
+from healthscope.services.ingestion_lock import (
+    HospitalIngestionAlreadyRunningError,
+    acquire_hospital_ingestion_lock,
+)
+
+settings = get_settings()
+engine = create_database_engine(settings.database_url)
+try:
+    with acquire_hospital_ingestion_lock(
+        engine,
+        source_dataset_id=settings.cms_hospital_dataset_id,
+    ):
+        try:
+            with acquire_hospital_ingestion_lock(
+                engine,
+                source_dataset_id=settings.cms_hospital_dataset_id,
+            ):
+                raise AssertionError("Overlapping ingestion acquired the same dataset lock")
+        except HospitalIngestionAlreadyRunningError:
+            pass
+finally:
+    engine.dispose()
+PY
+
 if "${compose[@]}" run --rm --no-deps verify-restore \
   >"${response_dir}/empty-restore.log" 2>&1; then
   echo "Restore verification unexpectedly accepted an empty migrated database." >&2
