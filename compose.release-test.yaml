@@ -9,12 +9,17 @@ services:
       - sh
       - -c
       - >-
-        openssl req -new -x509 -days 1 -nodes -out /tmp/server.crt
-        -keyout /tmp/server.key -subj /CN=database >/dev/null 2>&1 &&
+        cp /run/healthscope-tls/server.crt /tmp/server.crt &&
+        cp /run/healthscope-tls/server.key /tmp/server.key &&
         chown postgres:postgres /tmp/server.crt /tmp/server.key &&
         chmod 600 /tmp/server.key &&
         exec docker-entrypoint.sh postgres -c ssl=on
         -c ssl_cert_file=/tmp/server.crt -c ssl_key_file=/tmp/server.key
+    volumes:
+      - type: bind
+        source: ${HEALTHSCOPE_RELEASE_TEST_TLS_DIR:?Set HEALTHSCOPE_RELEASE_TEST_TLS_DIR}
+        target: /run/healthscope-tls
+        read_only: true
     environment:
       POSTGRES_DB: healthscope_release_test
       POSTGRES_USER: healthscope_release_test

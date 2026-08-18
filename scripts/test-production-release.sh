@@ -15,6 +15,14 @@ compose=(
 )
 base_url="http://127.0.0.1:${HEALTHSCOPE_HTTP_PORT}"
 response_dir="$(mktemp -d)"
+tls_dir="${response_dir}/postgres-tls"
+mkdir -p "${tls_dir}"
+openssl req -new -x509 -days 1 -nodes \
+  -out "${tls_dir}/server.crt" \
+  -keyout "${tls_dir}/server.key" \
+  -subj "/CN=database" >/dev/null 2>&1
+chmod 600 "${tls_dir}/server.key"
+export HEALTHSCOPE_RELEASE_TEST_TLS_DIR="${tls_dir}"
 
 cleanup() {
   local exit_code=$?
