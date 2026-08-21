@@ -32,7 +32,8 @@ after those decisions are authorized; it does not choose a provider or plan.
 - Pin deployments to a reviewed commit or immutable image digest. Do not deploy
   a moving `latest` tag.
 - Set both production image variables explicitly. Production Compose rejects a
-  missing API or frontend image instead of silently building a local fallback.
+  missing API or frontend image and contains no build contexts, so a deployment
+  host cannot silently rebuild and retag source as a reviewed release.
 - Successful `main` builds publish separate API and frontend images to GHCR with
   a `sha-<full-commit-sha>` tag. Publishing starts only after the container-level
   production release checks pass. Each digest has signed GitHub build-provenance
@@ -154,11 +155,17 @@ export HEALTHSCOPE_API_IMAGE=healthscope-api:production
 export HEALTHSCOPE_FRONTEND_IMAGE=healthscope-frontend:production
 npm --prefix frontend ci
 (cd frontend && npx --no-install playwright install --with-deps chromium)
-docker compose --env-file .env.production -f compose.production.yaml build
+docker build --tag "${HEALTHSCOPE_API_IMAGE}" ./backend
+docker build --tag "${HEALTHSCOPE_FRONTEND_IMAGE}" ./frontend
 bash scripts/test-production-release.sh
 ```
 
-The check verifies unsafe production settings, including a PostgreSQL URL that
+The local-only `docker build` commands deliberately sit outside production
+Compose; CI uses the same explicit source-build path before exercising the
+locally tagged images. A deployment host should only pull published artifacts.
+
+The check verifies that production Compose is pull-only and rejects unsafe
+production settings, including a PostgreSQL URL that
 does not require TLS, fail before startup; it also verifies migration ordering,
 PostgreSQL overlap rejection, private API/database networking,
 same-origin Nginx routing,

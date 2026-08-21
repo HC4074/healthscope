@@ -72,6 +72,7 @@ assert services["api"]["depends_on"]["database"]["condition"] == "service_health
 assert services["frontend"]["depends_on"]["api"]["condition"] == "service_healthy"
 assert "--no-access-log" in services["api"]["command"]
 assert services["verify-restore"]["command"] == ["healthscope-verify-restore"]
+assert all("build" not in service for service in services.values())
 assert not services["api"].get("ports")
 assert not services["database"].get("ports")
 assert str(services["frontend"]["ports"][0]["published"]) == sys.argv[2]

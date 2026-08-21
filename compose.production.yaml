@@ -2,8 +2,6 @@ name: healthscope-production
 
 x-api-service: &api-service
   image: "${HEALTHSCOPE_API_IMAGE:?Set HEALTHSCOPE_API_IMAGE to a reviewed release image}"
-  build:
-    context: ./backend
   env_file:
     - ${HEALTHSCOPE_ENV_FILE:-.env.production}
   init: true
@@ -49,8 +47,6 @@ services:
 
   frontend:
     image: "${HEALTHSCOPE_FRONTEND_IMAGE:?Set HEALTHSCOPE_FRONTEND_IMAGE to a reviewed release image}"
-    build:
-      context: ./frontend
     ports:
       - "${HEALTHSCOPE_HTTP_PORT:-80}:80"
     depends_on:

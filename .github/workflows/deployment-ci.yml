@@ -68,7 +68,9 @@ jobs:
           docker compose --env-file .env.production -f compose.production.yaml config --quiet
 
       - name: Build production images
-        run: docker compose --env-file .env.production -f compose.production.yaml build
+        run: |
+          docker build --tag healthscope-api:production ./backend
+          docker build --tag healthscope-frontend:production ./frontend
 
       - name: Exercise production release contract
         run: bash scripts/test-production-release.sh
