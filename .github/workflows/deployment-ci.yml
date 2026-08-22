@@ -8,6 +8,8 @@ on:
       - ".env.production.example"
       - "backend/**"
       - "frontend/**"
+      - "scripts/prepare-production-release.sh"
+      - "scripts/test-prepare-production-release.sh"
       - "scripts/test-production-release.sh"
       - "docs/deployment.md"
       - ".github/workflows/deployment-ci.yml"
@@ -19,6 +21,8 @@ on:
       - ".env.production.example"
       - "backend/**"
       - "frontend/**"
+      - "scripts/prepare-production-release.sh"
+      - "scripts/test-prepare-production-release.sh"
       - "scripts/test-production-release.sh"
       - "docs/deployment.md"
       - ".github/workflows/deployment-ci.yml"
@@ -66,6 +70,9 @@ jobs:
           printf '\nHEALTHSCOPE_API_IMAGE=healthscope-api:production\n' >> .env.production
           printf 'HEALTHSCOPE_FRONTEND_IMAGE=healthscope-frontend:production\n' >> .env.production
           docker compose --env-file .env.production -f compose.production.yaml config --quiet
+
+      - name: Test release image attestation preflight
+        run: bash scripts/test-prepare-production-release.sh
 
       - name: Build production images
         run: |

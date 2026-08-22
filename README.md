@@ -62,9 +62,11 @@ accessibility violations, horizontal mobile overflow, or broken keyboard focus
 and pagination.
 Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
-SBOM attestations. Production configuration now fails before startup,
-migration, or ingestion if debug is enabled, PostgreSQL is not configured, or a
-TLS-required PostgreSQL SSL mode is missing, or a documented
+SBOM attestations. A release preflight binds both images to the approved source
+commit and signing workflow, verifies both attestation types, and emits the
+matching immutable digest references. Production configuration now fails
+before startup, migration, or ingestion if debug is enabled, PostgreSQL is not
+configured, or a TLS-required PostgreSQL SSL mode is missing, or a documented
 placeholder/default database credential remains. Production Compose
 also requires both reviewed image references explicitly, contains no build
 contexts, and loads the references from the production env file during Compose

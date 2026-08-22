@@ -49,7 +49,7 @@ after those decisions are authorized; it does not choose a provider or plan.
 | `HEALTHSCOPE_FDA_API_KEY` | Optional secret | Raises the openFDA request quota. |
 | CMS, CDC, and FDA URL/dataset settings | Versioned defaults | Official public source identities and request policy. Change only through a reviewed release. |
 | `HEALTHSCOPE_HTTP_PORT` | Optional host setting | Published HTTP port; defaults to `80`. |
-| `HEALTHSCOPE_API_IMAGE`, `HEALTHSCOPE_FRONTEND_IMAGE` | Required for prebuilt deployment | Full-SHA GHCR tags or recorded immutable digests from the same release. |
+| `HEALTHSCOPE_API_IMAGE`, `HEALTHSCOPE_FRONTEND_IMAGE` | Required for prebuilt deployment | Attestation-verified immutable GHCR digests from the same release. |
 
 Start from [`.env.production.example`](../.env.production.example). The real
 `.env.production` file is ignored by Git. Restrict it to the deployment account
@@ -57,9 +57,10 @@ and prefer provider-managed secret injection when available.
 
 ## Deploy a release
 
-Choose the exact reviewed commit and configure both images from that same
-release. A full SHA tag is immutable by convention; resolve and record each
-registry digest before deployment for the strongest pin:
+Choose the exact reviewed main-branch commit. The release preflight verifies
+that both commit tags have build-provenance and SPDX SBOM attestations signed by
+this repository's deployment workflow on GitHub-hosted runners. It binds both
+artifacts to the requested source commit and emits immutable digest references.
 
 After the first successful publication, choose the package access policy in
 GitHub for both `healthscope-api` and `healthscope-frontend`. Public packages can
@@ -77,33 +78,45 @@ credential, not application configuration.
 
 ```bash
 release_sha=replace-with-full-40-character-commit-sha
-export HEALTHSCOPE_API_IMAGE="ghcr.io/hc4074/healthscope-api:sha-${release_sha}"
-export HEALTHSCOPE_FRONTEND_IMAGE="ghcr.io/hc4074/healthscope-frontend:sha-${release_sha}"
-docker pull "${HEALTHSCOPE_API_IMAGE}"
-docker pull "${HEALTHSCOPE_FRONTEND_IMAGE}"
-docker inspect --format='{{index .RepoDigests 0}}' "${HEALTHSCOPE_API_IMAGE}"
-docker inspect --format='{{index .RepoDigests 0}}' "${HEALTHSCOPE_FRONTEND_IMAGE}"
+bash scripts/prepare-production-release.sh "${release_sha}"
 ```
 
-Verify that each artifact was built by this repository. Repeat both commands
-with `healthscope-frontend` for the dashboard image:
+Copy the two emitted assignments into `.env.production`. The command fails if a
+tag is missing, either attestation is invalid or missing, the signing workflow
+or source revision differs, a self-hosted runner signed the artifact, or the
+provenance and SBOM subjects do not resolve to the same digest. It requires an
+authenticated GitHub CLI session and registry access for private packages.
+
+For an independent manual check, verify the digest references stored in the env
+file against the same repository and source revision:
 
 ```bash
+api_image=ghcr.io/hc4074/healthscope-api@sha256:<verified-digest>
 gh attestation verify \
-  "oci://ghcr.io/hc4074/healthscope-api:sha-${release_sha}" \
-  --repo HC4074/healthscope
-gh attestation verify \
-  "oci://ghcr.io/hc4074/healthscope-api:sha-${release_sha}" \
+  "oci://${api_image}" \
   --repo HC4074/healthscope \
+  --signer-workflow HC4074/healthscope/.github/workflows/deployment-ci.yml \
+  --source-digest "${release_sha}" \
+  --source-ref refs/heads/main \
+  --deny-self-hosted-runners
+gh attestation verify \
+  "oci://${api_image}" \
+  --repo HC4074/healthscope \
+  --signer-workflow HC4074/healthscope/.github/workflows/deployment-ci.yml \
+  --source-digest "${release_sha}" \
+  --source-ref refs/heads/main \
+  --deny-self-hosted-runners \
   --predicate-type https://spdx.dev/Document/v2.3
 ```
+
+Repeat the independent check with the emitted frontend digest.
 
 From a clean checkout at the reviewed commit:
 
 ```bash
 cp .env.production.example .env.production
-# Edit .env.production with the managed database URL, both release image tags,
-# and optional FDA key.
+# Edit .env.production with the managed database URL, both digest references
+# emitted by the release preflight, and optional FDA key.
 docker compose --env-file .env.production -f compose.production.yaml config --quiet
 docker compose --env-file .env.production -f compose.production.yaml pull
 docker compose --env-file .env.production -f compose.production.yaml up -d

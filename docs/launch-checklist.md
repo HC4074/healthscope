@@ -38,7 +38,7 @@ or an account-specific quota.
 
 | Gate | Acceptance evidence |
 | --- | --- |
-| Container release | Pulls both private or public GHCR images by immutable digest or full-SHA tag without rebuilding them. |
+| Container release | Runs the repository preflight, then pulls both private or public GHCR images by its attestation-verified immutable digests without rebuilding them. |
 | Process model | Runs the long-lived frontend and API plus one-shot migration and ingestion commands from the reviewed images. |
 | Private networking | Exposes only the Nginx frontend publicly; the API is reachable by the frontend but not directly from the internet. |
 | TLS and routing | Terminates HTTPS for the chosen hostname and preserves the application's security, cache, and request-ID headers. |
@@ -69,7 +69,8 @@ The person authorizing deployment must provide or approve all of the following:
   as a host registry credential, not an application secret;
 - the daily UTC ingestion time, alert destination/owner, log retention, backup
   retention, point-in-time recovery window, and monthly budget ceiling; and
-- the approved full commit SHA for both production images and the launch window.
+- the approved full commit SHA for both production images, the two preflight-
+  verified registry digests, and the launch window.
 
 Until this input exists, production provisioning, data ingestion, monitoring,
 and restore validation remain blocked. Repository work may improve the reviewed
