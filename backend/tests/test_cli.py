@@ -22,6 +22,7 @@ RESULT = HospitalIngestionResult(
     pages=55,
     request_attempts=56,
 )
+RELEASE_SHA = "0123456789abcdef0123456789abcdef01234567"
 
 
 def test_configured_ingestion_disposes_database_engine() -> None:
@@ -58,7 +59,7 @@ def test_configured_ingestion_disposes_database_engine() -> None:
 
 
 def test_ingestion_cli_reports_structured_success(capsys: pytest.CaptureFixture[str]) -> None:
-    settings = Settings(environment="test")
+    settings = Settings(environment="test", release_sha=RELEASE_SHA)
 
     with (
         patch("healthscope.cli.get_settings", return_value=settings),
@@ -80,11 +81,12 @@ def test_ingestion_cli_reports_structured_success(capsys: pytest.CaptureFixture[
         "upserted_count": 5432,
         "pages": 55,
         "request_attempts": 56,
+        "release_sha": RELEASE_SHA,
     }
 
 
 def test_ingestion_cli_reports_structured_failure(capsys: pytest.CaptureFixture[str]) -> None:
-    settings = Settings(environment="test")
+    settings = Settings(environment="test", release_sha=RELEASE_SHA)
 
     with (
         patch("healthscope.cli.get_settings", return_value=settings),
@@ -102,13 +104,14 @@ def test_ingestion_cli_reports_structured_failure(capsys: pytest.CaptureFixture[
         "status": "error",
         "error_type": "HospitalIngestionError",
         "message": "CMS page changed",
+        "release_sha": RELEASE_SHA,
     }
 
 
 def test_ingestion_cli_reports_overlapping_run_without_starting_client(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    settings = Settings(environment="test")
+    settings = Settings(environment="test", release_sha=RELEASE_SHA)
     engine = MagicMock()
     client = MagicMock()
 
@@ -129,6 +132,7 @@ def test_ingestion_cli_reports_overlapping_run_without_starting_client(
         "status": "error",
         "error_type": "HospitalIngestionAlreadyRunningError",
         "message": "ingestion already running",
+        "release_sha": RELEASE_SHA,
     }
     client.__aenter__.assert_not_called()
     engine.dispose.assert_called_once_with()

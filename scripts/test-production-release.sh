@@ -14,6 +14,7 @@ compose=(
   --profile operations
 )
 base_url="http://127.0.0.1:${HEALTHSCOPE_HTTP_PORT}"
+expected_release_sha="${HEALTHSCOPE_EXPECTED_RELEASE_SHA:-$(git rev-parse HEAD)}"
 response_dir="$(mktemp -d)"
 tls_dir="${response_dir}/postgres-tls"
 mkdir -p "${tls_dir}"
@@ -90,6 +91,7 @@ expect_configuration_failure() {
 }
 
 expect_configuration_failure "debug" -e HEALTHSCOPE_DEBUG=true
+expect_configuration_failure "release-sha" -e HEALTHSCOPE_RELEASE_SHA=development
 expect_configuration_failure "database-backend" -e HEALTHSCOPE_DATABASE_URL=sqlite:///healthscope.db
 expect_configuration_failure \
   "database-tls" \
@@ -100,10 +102,21 @@ expect_configuration_failure \
 
 "${compose[@]}" up --detach --wait --wait-timeout 180 database api frontend
 
+frontend_container="$("${compose[@]}" ps --quiet frontend)"
+frontend_release_sha="$(
+  docker inspect \
+    --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
+    "${frontend_container}"
+)"
+if [[ "${frontend_release_sha}" != "${expected_release_sha}" ]]; then
+  echo "Frontend image release SHA does not match the checked-out release." >&2
+  exit 1
+fi
+
 curl --fail --silent --show-error \
   --dump-header "${response_dir}/health.headers" \
   "${base_url}/api/v1/health?release_probe=must-not-be-logged" >"${response_dir}/health.json"
-python - "${response_dir}/health.json" <<'PY'
+python - "${response_dir}/health.json" "${expected_release_sha}" <<'PY'
 import json
 import sys
 
@@ -112,6 +125,7 @@ with open(sys.argv[1], encoding="utf-8") as response_file:
 
 assert response["status"] == "ok"
 assert response["environment"] == "production"
+assert response["release_sha"] == sys.argv[2]
 PY
 
 python - "${response_dir}/health.headers" "${response_dir}/request-id.txt" <<'PY'
@@ -141,6 +155,7 @@ request_id="$(<"${response_dir}/request-id.txt")"
 grep --quiet "\"request_id\":\"${request_id}\"" "${response_dir}/request.log"
 grep --quiet '"event":"http_request_completed"' "${response_dir}/request.log"
 grep --quiet '"event":"proxy_request_completed"' "${response_dir}/request.log"
+grep --quiet "\"release_sha\":\"${expected_release_sha}\"" "${response_dir}/request.log"
 if grep --quiet 'release_probe\|must-not-be-logged' "${response_dir}/request.log"; then
   echo "Production access logs included a query-string marker." >&2
   exit 1

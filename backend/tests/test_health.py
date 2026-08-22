@@ -13,9 +13,15 @@ from healthscope.config import Settings
 from healthscope.database import get_engine
 from healthscope.main import create_app
 
+RELEASE_SHA = "0123456789abcdef0123456789abcdef01234567"
+
 
 def test_health_check_returns_service_metadata() -> None:
-    settings = Settings(app_name="HealthScope Test", environment="test")
+    settings = Settings(
+        app_name="HealthScope Test",
+        environment="test",
+        release_sha=RELEASE_SHA,
+    )
 
     with TestClient(create_app(settings)) as client:
         response = client.get("/api/v1/health")
@@ -25,12 +31,13 @@ def test_health_check_returns_service_metadata() -> None:
         "status": "ok",
         "service": "HealthScope Test",
         "version": "0.1.0",
+        "release_sha": RELEASE_SHA,
         "environment": "test",
     }
 
 
 def test_api_preserves_safe_request_id_and_logs_query_free_access_event() -> None:
-    settings = Settings(environment="test")
+    settings = Settings(environment="test", release_sha=RELEASE_SHA)
 
     with (
         patch("healthscope.observability.access_logger.info") as log_info,
@@ -50,6 +57,7 @@ def test_api_preserves_safe_request_id_and_logs_query_free_access_event() -> Non
         "method": "GET",
         "path": "/api/v1/health",
         "request_id": "monitor-check:42",
+        "release_sha": RELEASE_SHA,
         "service_version": "0.1.0",
         "status_code": 200,
     }

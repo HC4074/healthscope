@@ -64,9 +64,13 @@ Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. A release preflight binds both images to the approved source
 commit and signing workflow, verifies both attestation types, and emits the
-matching immutable digest references. Production configuration now fails
+matching immutable digest references. The source SHA is also embedded into both
+images at build time; the API exposes it through liveness, structured request
+events, and ingestion command output so deployed evidence identifies the exact
+release. Production configuration now fails
 before startup, migration, or ingestion if debug is enabled, PostgreSQL is not
-configured, or a TLS-required PostgreSQL SSL mode is missing, or a documented
+configured, the image lacks a full release SHA, a TLS-required PostgreSQL SSL
+mode is missing, or a documented
 placeholder/default database credential remains. Production Compose
 also requires both reviewed image references explicitly, contains no build
 contexts, and loads the references from the production env file during Compose

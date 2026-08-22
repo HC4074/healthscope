@@ -25,6 +25,7 @@ def health_check(settings: SettingsDependency) -> HealthResponse:
     return HealthResponse(
         service=settings.app_name,
         version=__version__,
+        release_sha=settings.release_sha,
         environment=settings.environment,
     )
 

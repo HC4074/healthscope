@@ -93,9 +93,9 @@ The provider-neutral production Compose contract replaces the local database
 with managed PostgreSQL, exposes only Nginx, runs migrations as a required
 one-shot service, and gates traffic on a database-backed API readiness probe.
 Shared settings validation makes API startup, migrations, and ingestion fail
-before connecting when production enables debug mode, selects a non-PostgreSQL
-database, omits a TLS-required PostgreSQL SSL mode, or retains a documented
-placeholder/default database credential.
+before connecting when production enables debug mode, lacks a full build-bound
+release SHA, selects a non-PostgreSQL database, omits a TLS-required PostgreSQL
+SSL mode, or retains a documented placeholder/default database credential.
 Non-production SQLite support remains available for isolated tests.
 The separate liveness probe does not query dependencies. The deployment runbook
 defines first ingestion, external daily scheduling, monitoring, backups, and a
@@ -105,7 +105,9 @@ termination remain the hosting provider's responsibility.
 Nginx assigns an opaque request ID at the public boundary and forwards it to the
 API. The API returns that identifier in `X-Request-ID` and emits a structured
 completion event containing the request method, path, status, duration,
-environment, and service version. Query strings and response bodies are not
+environment, service version, and build-bound release SHA. The liveness contract
+returns the same SHA, and ingestion output includes it for scheduler evidence.
+Query strings and response bodies are not
 logged. Nginx uses the same identifier in its own query-free structured request
 event, while packaged Uvicorn commands disable the duplicate default access
 line. This supplies cross-layer correlation while keeping public-data filter
@@ -137,7 +139,9 @@ healthcare data. After those checks pass on `main`, separate API and frontend
 images are published to GHCR under full-commit-SHA tags. OCI source metadata,
 signed build provenance, and signed SPDX SBOM attestations bind each registry
 digest back to the exact workflow and repository revision; production can pull
-reviewed artifacts without rebuilding them on the host. Production Compose
+reviewed artifacts without rebuilding them on the host. The build also embeds
+that revision into both images, and production API settings reject the
+development placeholder. Production Compose
 requires both image references and contains no build contexts. The runbook
 passes the production env file at Compose interpolation time, so an omitted
 release tag fails closed and a deployment host cannot locally rebuild source

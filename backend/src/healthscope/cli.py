@@ -46,11 +46,12 @@ async def _run_configured_ingestion(settings: Settings) -> HospitalIngestionResu
         engine.dispose()
 
 
-def _result_payload(result: HospitalIngestionResult) -> dict[str, object]:
+def _result_payload(result: HospitalIngestionResult, *, release_sha: str) -> dict[str, object]:
     """Convert an ingestion result to a stable JSON-serializable payload."""
 
     payload: dict[str, object] = asdict(result)
     payload["retrieved_at"] = result.retrieved_at.isoformat()
+    payload["release_sha"] = release_sha
     payload["status"] = "ok"
     return payload
 
@@ -58,8 +59,10 @@ def _result_payload(result: HospitalIngestionResult) -> dict[str, object]:
 def main() -> None:
     """Ingest the current public CMS hospital dataset and report JSON."""
 
+    settings: Settings | None = None
     try:
-        result = asyncio.run(_run_configured_ingestion(get_settings()))
+        settings = get_settings()
+        result = asyncio.run(_run_configured_ingestion(settings))
     except (
         CMSClientError,
         HospitalIngestionAlreadyRunningError,
@@ -68,16 +71,15 @@ def main() -> None:
         ValidationError,
         ValueError,
     ) as exc:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error_type": type(exc).__name__,
-                    "message": str(exc),
-                }
-            ),
-            file=sys.stderr,
-        )
+        payload = {
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "message": str(exc),
+        }
+        if settings is not None:
+            payload["release_sha"] = settings.release_sha
+        print(json.dumps(payload), file=sys.stderr)
         raise SystemExit(1) from exc
 
-    print(json.dumps(_result_payload(result)))
+    assert settings is not None
+    print(json.dumps(_result_payload(result, release_sha=settings.release_sha)))

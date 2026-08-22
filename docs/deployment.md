@@ -37,7 +37,8 @@ after those decisions are authorized; it does not choose a provider or plan.
 - Successful `main` builds publish separate API and frontend images to GHCR with
   a `sha-<full-commit-sha>` tag. Publishing starts only after the container-level
   production release checks pass. Each digest has signed GitHub build-provenance
-  and SPDX SBOM attestations.
+  and SPDX SBOM attestations. The same full SHA is embedded as image metadata and
+  API runtime metadata; do not override `HEALTHSCOPE_RELEASE_SHA` on the host.
 
 ## Secret and configuration inventory
 
@@ -46,6 +47,7 @@ after those decisions are authorized; it does not choose a provider or plan.
 | `HEALTHSCOPE_DATABASE_URL` | Required secret | Managed PostgreSQL SQLAlchemy URL; include the provider's TLS mode. |
 | `HEALTHSCOPE_ENVIRONMENT` | Required, `production` | Identifies production in health metadata. |
 | `HEALTHSCOPE_DEBUG` | Required, `false` | Prevents debug responses in production. |
+| `HEALTHSCOPE_RELEASE_SHA` | Image-managed | Full source revision embedded during the reviewed image build; never set it in the deployment env file. |
 | `HEALTHSCOPE_FDA_API_KEY` | Optional secret | Raises the openFDA request quota. |
 | CMS, CDC, and FDA URL/dataset settings | Versioned defaults | Official public source identities and request policy. Change only through a reviewed release. |
 | `HEALTHSCOPE_HTTP_PORT` | Optional host setting | Published HTTP port; defaults to `80`. |
@@ -166,10 +168,11 @@ Run the same check from a Docker-equipped development host:
 cp .env.production.example .env.production
 export HEALTHSCOPE_API_IMAGE=healthscope-api:production
 export HEALTHSCOPE_FRONTEND_IMAGE=healthscope-frontend:production
+release_sha=$(git rev-parse HEAD)
 npm --prefix frontend ci
 (cd frontend && npx --no-install playwright install --with-deps chromium)
-docker build --tag "${HEALTHSCOPE_API_IMAGE}" ./backend
-docker build --tag "${HEALTHSCOPE_FRONTEND_IMAGE}" ./frontend
+docker build --build-arg HEALTHSCOPE_RELEASE_SHA="${release_sha}" --tag "${HEALTHSCOPE_API_IMAGE}" ./backend
+docker build --build-arg HEALTHSCOPE_RELEASE_SHA="${release_sha}" --tag "${HEALTHSCOPE_FRONTEND_IMAGE}" ./frontend
 bash scripts/test-production-release.sh
 ```
 
@@ -178,8 +181,8 @@ Compose; CI uses the same explicit source-build path before exercising the
 locally tagged images. A deployment host should only pull published artifacts.
 
 The check verifies that production Compose is pull-only and rejects unsafe
-production settings, including a PostgreSQL URL that
-does not require TLS, fail before startup; it also verifies migration ordering,
+production settings, including a missing build-bound release SHA or PostgreSQL
+URL that does not require TLS, fail before startup; it also verifies migration ordering,
 PostgreSQL overlap rejection, private API/database networking,
 same-origin Nginx routing,
 production liveness and readiness responses, the SPA fallback, and the current
@@ -208,8 +211,9 @@ docker compose --env-file .env.production -f compose.production.yaml --profile o
 curl --fail --show-error https://healthscope.example.com/api/v1/hospitals/ingestion/health
 ```
 
-The command must report matching `expected`, `fetched`, and `upserted` counts and
-a `succeeded` run ID. Confirm that the ingestion-health endpoint is then 200.
+The command must report matching `expected`, `fetched`, and `upserted` counts, a
+`succeeded` run ID, and the approved full release SHA. Confirm that the
+ingestion-health endpoint is then 200.
 
 Schedule the same one-shot container daily. For a UTC cron host, a 06:00 UTC
 example is:
@@ -237,8 +241,8 @@ outside API startup so restarts never trigger unscheduled data writes.
   between application releases.
 - Capture the `X-Request-ID` response header in monitor alerts and use it to
   locate the matching `http_request_completed` API log event. Those structured
-  events include method, path, status, duration, environment, and release
-  version. The Nginx `proxy_request_completed` event uses the same ID. Both
+  events include method, path, status, duration, environment, service version,
+  and full release SHA. The Nginx `proxy_request_completed` event uses the same ID. Both
   deliberately omit query strings and response bodies.
 - Alert on scheduler failures and keep the structured ingestion output with the
   release identifier.

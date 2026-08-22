@@ -26,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_middleware(
         RequestObservabilityMiddleware,
         environment=resolved_settings.environment,
+        release_sha=resolved_settings.release_sha,
         version=__version__,
     )
     if settings is not None:

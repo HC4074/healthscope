@@ -12,6 +12,7 @@ on:
       - "scripts/test-prepare-production-release.sh"
       - "scripts/test-production-release.sh"
       - "docs/deployment.md"
+      - "docs/launch-checklist.md"
       - ".github/workflows/deployment-ci.yml"
   push:
     branches: [main]
@@ -25,6 +26,7 @@ on:
       - "scripts/test-prepare-production-release.sh"
       - "scripts/test-production-release.sh"
       - "docs/deployment.md"
+      - "docs/launch-checklist.md"
       - ".github/workflows/deployment-ci.yml"
 
 permissions:
@@ -76,8 +78,14 @@ jobs:
 
       - name: Build production images
         run: |
-          docker build --tag healthscope-api:production ./backend
-          docker build --tag healthscope-frontend:production ./frontend
+          docker build \
+            --build-arg HEALTHSCOPE_RELEASE_SHA="${GITHUB_SHA}" \
+            --tag healthscope-api:production \
+            ./backend
+          docker build \
+            --build-arg HEALTHSCOPE_RELEASE_SHA="${GITHUB_SHA}" \
+            --tag healthscope-frontend:production \
+            ./frontend
 
       - name: Exercise production release contract
         run: bash scripts/test-production-release.sh
@@ -149,6 +157,8 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            HEALTHSCOPE_RELEASE_SHA=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           provenance: false

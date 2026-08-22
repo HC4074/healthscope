@@ -24,7 +24,8 @@ a fresh 32-character request ID before forwarding the request; direct API calls
 may supply a safe 1-128 character identifier using letters, digits, `.`, `_`,
 `:`, or `-`. Unsafe values are replaced with a UUID. The API logs one JSON
 completion event with the same ID, method, path, status, duration, environment,
-and service version. Query strings are deliberately omitted so filters, future
+service version, and build-bound release SHA. The liveness response exposes the
+same SHA for deployment evidence. Query strings are deliberately omitted so filters, future
 credentials, and other request parameters do not enter access logs.
 Packaged and Compose launch commands disable Uvicorn's duplicate access line,
 which otherwise includes the query string.
@@ -121,7 +122,8 @@ Docker Compose supplies the container database URL and applies pending
 migrations automatically when the API container starts.
 
 When `HEALTHSCOPE_ENVIRONMENT=production`, settings validation fails before API
-startup, migration, or ingestion if debug mode is enabled, the database URL is
+startup, migration, or ingestion if debug mode is enabled, the image does not
+provide a full 40-character `HEALTHSCOPE_RELEASE_SHA`, the database URL is
 not PostgreSQL, does not require TLS with `sslmode=require`, `verify-ca`, or
 `verify-full`, or retains a documented placeholder/default database host or
 password. Development and test environments keep SQLite support for isolated
@@ -172,6 +174,8 @@ On PostgreSQL, the command acquires a dataset-scoped advisory lock before it
 opens the CMS client. A concurrent invocation performs no source requests and
 exits nonzero with `HospitalIngestionAlreadyRunningError`, allowing the
 scheduler to alert without duplicating a full ingestion.
+Success and operational-error JSON include the image's release SHA so retained
+scheduler output can be tied to the deployed artifact.
 Configure page size with
 `HEALTHSCOPE_CMS_INGESTION_PAGE_SIZE` (1–100, default 100). Transient CMS
 timeouts and HTTP failures use bounded exponential retries; configure them with

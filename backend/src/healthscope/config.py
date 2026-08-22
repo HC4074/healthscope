@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     app_name: str = "HealthScope"
     environment: str = Field(default="development", pattern=r"^[a-z][a-z0-9_-]*$")
+    release_sha: str = Field(default="development", pattern=r"^(?:development|[0-9a-f]{40})$")
     api_prefix: str = "/api/v1"
     debug: bool = False
     database_url: str = (
@@ -64,6 +65,10 @@ class Settings(BaseSettings):
             return self
         if self.debug:
             raise ValueError("HEALTHSCOPE_DEBUG must be false in production")
+        if self.release_sha == "development":
+            raise ValueError(
+                "HEALTHSCOPE_RELEASE_SHA must identify the full source commit in production"
+            )
 
         try:
             database_url = make_url(self.database_url)

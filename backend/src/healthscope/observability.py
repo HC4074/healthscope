@@ -35,6 +35,7 @@ def _access_event(
     status_code: int,
     duration_ms: float,
     environment: str,
+    release_sha: str,
     version: str,
 ) -> str:
     """Serialize a stable, query-free access event for log processors."""
@@ -45,6 +46,7 @@ def _access_event(
             "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
+            "release_sha": release_sha,
             "status_code": status_code,
             "duration_ms": round(duration_ms, 3),
             "environment": environment,
@@ -58,9 +60,17 @@ def _access_event(
 class RequestObservabilityMiddleware(BaseHTTPMiddleware):
     """Attach correlation IDs and emit one structured event per API request."""
 
-    def __init__(self, app: ASGIApp, *, environment: str, version: str) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        environment: str,
+        release_sha: str,
+        version: str,
+    ) -> None:
         super().__init__(app)
         self._environment = environment
+        self._release_sha = release_sha
         self._version = version
 
     async def dispatch(
@@ -82,6 +92,7 @@ class RequestObservabilityMiddleware(BaseHTTPMiddleware):
                     status_code=500,
                     duration_ms=duration_ms,
                     environment=self._environment,
+                    release_sha=self._release_sha,
                     version=self._version,
                 )
             )
@@ -96,6 +107,7 @@ class RequestObservabilityMiddleware(BaseHTTPMiddleware):
                 status_code=response.status_code,
                 duration_ms=duration_ms,
                 environment=self._environment,
+                release_sha=self._release_sha,
                 version=self._version,
             )
         )
