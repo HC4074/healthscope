@@ -154,6 +154,13 @@ measure catalog, and one newest FDA recall. It writes no database records and is
 not a substitute for deployed ingestion monitoring; it detects upstream schema
 or validation drift even while production provisioning remains credential-gated.
 
+The packaged `healthscope-verify-deployment` command exercises the deployed
+public HTTPS boundary after initial ingestion. It binds liveness to the approved
+full release SHA, checks readiness, verifies equal ingestion and snapshot totals,
+and enforces the Nginx request-ID, security-header, cache, and SPA entry-document
+contract. Its output contains aggregate operational evidence only; it does not
+return hospital records or access the database directly.
+
 Backup exercises use the same reviewed API image through a separate read-only
 `healthscope-verify-restore` process. It checks the restored migration revision,
 newest CMS completion and exact retrieval batch, geographic totals, and matching

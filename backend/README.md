@@ -182,6 +182,26 @@ timeouts and HTTP failures use bounded exponential retries; configure them with
 `HEALTHSCOPE_CMS_INGESTION_MAX_ATTEMPTS` (default 3) and
 `HEALTHSCOPE_CMS_INGESTION_RETRY_DELAY_SECONDS` (default 1).
 
+## Deployed release verification
+
+After the first production ingestion, run the packaged verifier from outside
+the deployed network boundary:
+
+```bash
+healthscope-verify-deployment \
+  https://healthscope.example.com \
+  0123456789abcdef0123456789abcdef01234567
+```
+
+The HTTPS origin cannot contain credentials, a query, fragment, or path. The
+command requires liveness to expose the approved full release SHA and production
+environment, database readiness to succeed, the newest ingestion to be healthy
+and complete with equal positive counts, and its snapshot metadata and state
+coverage to agree. It also verifies public request IDs, the dashboard entry
+document, and the production security/cache headers. Successful JSON contains
+only the public origin, release SHA, aggregate snapshot/run evidence, and request
+IDs. Transport or contract failures exit with status 1.
+
 ## Restored database verification
 
 Run the packaged read-only verifier against an isolated restored database before

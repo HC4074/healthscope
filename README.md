@@ -30,6 +30,7 @@ verified completion metadata with state-level coverage APIs, durable ingestion r
 monitor-ready health checks, an explicit full-dataset ingestion command with
 database-backed overlap prevention,
 read-only restored-database integrity verification,
+packaged public deployment acceptance verification,
 automated backend quality checks, a PostgreSQL development container, and a
 responsive React community-health and drug-recall explorers. The dashboard
 discovers its measure filters from the live CDC catalog, presents paginated
@@ -89,6 +90,11 @@ The packaged restore verifier checks an isolated restored database against the
 release migration head, newest CMS completion marker, exact snapshot row and
 state totals, and matching successful ingestion counts. It emits only aggregate
 operational evidence and never writes healthcare records.
+
+The packaged deployment verifier checks the public HTTPS boundary against an
+approved full release SHA, confirms database readiness and a complete current
+CMS ingestion, and records aggregate request/ingestion evidence without
+returning healthcare records or secrets.
 
 ## Quick start
 

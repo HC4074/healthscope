@@ -95,7 +95,7 @@ ticket. Stop at the first failure and follow the runbook's rollback guidance.
 - [ ] Runtime contract: `/api/v1/health`, `/api/v1/ready`, and `/overview`
   succeed through the public URL; liveness reports the approved full release
   SHA, and security/cache headers plus `X-Request-ID` propagation match the
-  runbook.
+  runbook. The aggregate `healthscope-verify-deployment` output is retained.
 - [ ] Initial live ingestion: the one-shot CMS job reports equal expected,
   fetched, and upserted counts with a succeeded run ID; no fabricated or bundled
   healthcare records are loaded.
@@ -121,8 +121,8 @@ Keep the following outside the repository when it includes account details:
 
 - the provider decision record and plan/quota evidence;
 - target SHA, image digests, and successful attestation verification output;
-- migration revision, deployment time, runtime release SHA, and public endpoint
-  check results;
+- migration revision, deployment time, runtime release SHA, and aggregate
+  `healthscope-verify-deployment` output;
 - initial ingestion run ID and counts;
 - monitor and scheduler test events with owner acknowledgement;
 - backup identifier, isolated restore time, integrity results, and cleanup

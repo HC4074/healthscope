@@ -153,6 +153,23 @@ curl --fail --show-error https://healthscope.example.com/overview
 
 `/api/v1/health` proves the process is accepting requests. `/api/v1/ready`
 returns 503 when PostgreSQL cannot be reached and is the routing health check.
+These checks are useful during rollout before the initial ingestion. After that
+ingestion succeeds, capture the complete public acceptance contract with the
+packaged verifier from a host outside the deployment network:
+
+```bash
+docker run --rm "${api_image}" healthscope-verify-deployment \
+  https://healthscope.example.com \
+  "$release_sha" | tee deployment-verification.json
+```
+
+The command accepts only a path-free HTTPS origin. It requires the liveness SHA
+and environment, readiness response, successful equal-count CMS ingestion,
+matching complete snapshot and state totals, dashboard entry document, public
+request IDs, and security/cache headers to match the reviewed release contract.
+It emits aggregate JSON only and exits nonzero at the first failed gate. Retain
+the output in the private launch ticket; do not commit it because it identifies
+the production run and request correlation IDs.
 
 ## Verify the release contract
 
@@ -213,7 +230,8 @@ curl --fail --show-error https://healthscope.example.com/api/v1/hospitals/ingest
 
 The command must report matching `expected`, `fetched`, and `upserted` counts, a
 `succeeded` run ID, and the approved full release SHA. Confirm that the
-ingestion-health endpoint is then 200.
+ingestion-health endpoint is then 200, then run
+`healthscope-verify-deployment` to bind that run to the public release contract.
 
 Schedule the same one-shot container daily. For a UTC cron host, a 06:00 UTC
 example is:
