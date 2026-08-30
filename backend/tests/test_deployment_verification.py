@@ -95,17 +95,20 @@ def deployment_client(
 
     def handler(request: httpx.Request) -> httpx.Response:
         headers = dict(SECURITY_HEADERS)
-        if missing_header is not None:
-            headers.pop(missing_header)
         if request.url.path == "/overview":
             headers.update({"content-type": "text/html", "cache-control": "no-cache"})
+            if missing_header is not None:
+                headers.pop(missing_header, None)
             return httpx.Response(200, headers=headers, text='<div id="root"></div>')
         headers.update(
             {
+                "cache-control": "no-store",
                 "content-type": "application/json",
                 "x-request-id": REQUEST_IDS[request.url.path],
             }
         )
+        if missing_header is not None:
+            headers.pop(missing_header, None)
         return httpx.Response(200, headers=headers, json=configured_payloads[request.url.path])
 
     return httpx.Client(
@@ -174,6 +177,14 @@ def test_verify_deployment_rejects_missing_public_security_header() -> None:
     with (
         deployment_client(missing_header="x-frame-options") as client,
         pytest.raises(DeploymentVerificationError, match="invalid x-frame-options header"),
+    ):
+        verify_deployment(client, expected_release_sha=RELEASE_SHA)
+
+
+def test_verify_deployment_rejects_cacheable_public_api_response() -> None:
+    with (
+        deployment_client(missing_header="cache-control") as client,
+        pytest.raises(DeploymentVerificationError, match="invalid cache-control header"),
     ):
         verify_deployment(client, expected_release_sha=RELEASE_SHA)
 

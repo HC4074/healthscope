@@ -144,7 +144,7 @@ assert re.search(
     re.IGNORECASE | re.MULTILINE,
 )
 assert re.search(r"^X-Content-Type-Options:\s*nosniff\s*$", headers, re.IGNORECASE | re.MULTILINE)
-assert not re.search(r"^Cache-Control:", headers, re.IGNORECASE | re.MULTILINE)
+assert re.search(r"^Cache-Control:\s*no-store\s*$", headers, re.IGNORECASE | re.MULTILINE)
 
 with open(sys.argv[2], "w", encoding="utf-8") as request_id_file:
     request_id_file.write(match.group(1))

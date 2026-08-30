@@ -83,8 +83,9 @@ container logs without recording request parameters. A scheduled compatibility
 smoke check queries bounded live samples from all three official sources each
 day, catching upstream schema drift without writing healthcare records.
 The public Nginx boundary also applies a restrictive same-origin content
-security policy, browser hardening headers, revalidated SPA entry documents,
-and immutable caching for content-hashed assets.
+security policy, browser hardening headers, non-cacheable API responses,
+revalidated SPA entry documents, and immutable caching for content-hashed
+assets.
 
 The packaged restore verifier checks an isolated restored database against the
 release migration head, newest CMS completion marker, exact snapshot row and

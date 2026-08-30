@@ -17,7 +17,8 @@ after those decisions are authorized; it does not choose a provider or plan.
 - Keep the API private; only the Nginx frontend publishes a host port and proxies
   same-origin `/api` requests to it.
 - Preserve the Nginx browser-security and cache headers at any upstream CDN or
-  TLS proxy. SPA documents must revalidate; hashed assets may remain immutable.
+  TLS proxy. API responses must remain `no-store`, SPA documents must
+  revalidate, and hashed assets may remain immutable.
 - Use a managed PostgreSQL connection that requires TLS. Never reuse the local
   `healthscope-local-only` password.
 - Production settings fail before startup, migration, or ingestion when debug is
@@ -166,7 +167,8 @@ docker run --rm "${api_image}" healthscope-verify-deployment \
 The command accepts only a path-free HTTPS origin. It requires the liveness SHA
 and environment, readiness response, successful equal-count CMS ingestion,
 matching complete snapshot and state totals, dashboard entry document, public
-request IDs, and security/cache headers to match the reviewed release contract.
+request IDs, non-cacheable API responses, and security/cache headers to match
+the reviewed release contract.
 It emits aggregate JSON only and exits nonzero at the first failed gate. Retain
 the output in the private launch ticket; do not commit it because it identifies
 the production run and request correlation IDs.

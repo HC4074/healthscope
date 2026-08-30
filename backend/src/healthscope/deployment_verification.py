@@ -21,6 +21,7 @@ from healthscope.schemas.hospitals import (
 
 RELEASE_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 REQUEST_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+API_CACHE_CONTROL = "no-store"
 REQUIRED_SECURITY_HEADERS = {
     "content-security-policy": (
         "default-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; "
@@ -112,6 +113,10 @@ def _get_model[ResponseModel: BaseModel](
     model: type[ResponseModel],
 ) -> tuple[ResponseModel, str]:
     response = _get_response(client, path)
+    _require(
+        response.headers.get("cache-control") == API_CACHE_CONTROL,
+        f"{path} returned an invalid cache-control header",
+    )
     _require(
         response.headers.get("content-type", "").startswith("application/json"),
         f"{path} did not return JSON",

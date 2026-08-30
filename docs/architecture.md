@@ -115,10 +115,12 @@ values and any future sensitive parameters out of access events.
 
 The same boundary sends a restrictive same-origin content security policy,
 denies framing and unused browser capabilities, prevents MIME sniffing, and
-limits referrer disclosure. SPA entry documents use `no-cache` so a deployed
-release is discovered promptly; content-hashed JavaScript and CSS use a
-one-year immutable cache policy. Deployment CI verifies both header classes
-against the running production image.
+limits referrer disclosure. Public API responses use `no-store` so a hosting
+proxy, CDN, or browser cannot reuse stale readiness, ingestion-health, or live
+source evidence. SPA entry documents use `no-cache` so a deployed release is
+discovered promptly; content-hashed JavaScript and CSS use a one-year immutable
+cache policy. Deployment CI verifies all three header classes against the
+running production image.
 
 Deployment CI also boots the production images against an ephemeral, empty
 PostgreSQL instance. It verifies unsafe settings fail before startup, migration
