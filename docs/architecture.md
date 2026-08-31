@@ -143,7 +143,9 @@ signed build provenance, and signed SPDX SBOM attestations bind each registry
 digest back to the exact workflow and repository revision; production can pull
 reviewed artifacts without rebuilding them on the host. The build also embeds
 that revision into both images, and production API settings reject the
-development placeholder. Production Compose
+development placeholder. External workflow actions are pinned to full commit
+SHAs, with a dedicated policy check preventing mutable action tags from entering
+the CI and release path. Production Compose
 requires both image references and contains no build contexts. The runbook
 passes the production env file at Compose interpolation time, so an omitted
 release tag fails closed and a deployment host cannot locally rebuild source
