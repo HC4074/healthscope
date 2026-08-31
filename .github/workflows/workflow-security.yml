@@ -3,28 +3,37 @@ name: Workflow Security
 on:
   pull_request:
     paths:
+      - ".github/dependabot.yml"
       - ".github/workflows/**"
+      - "scripts/check_dependabot_actions.py"
       - "scripts/check_workflow_action_pins.py"
+      - "scripts/test_check_dependabot_actions.py"
       - "scripts/test_check_workflow_action_pins.py"
   push:
     branches: [main]
     paths:
+      - ".github/dependabot.yml"
       - ".github/workflows/**"
+      - "scripts/check_dependabot_actions.py"
       - "scripts/check_workflow_action_pins.py"
+      - "scripts/test_check_dependabot_actions.py"
       - "scripts/test_check_workflow_action_pins.py"
 
 permissions:
   contents: read
 
 jobs:
-  immutable-actions:
+  workflow-supply-chain:
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Reject mutable external action references
+      - name: Validate workflow supply-chain policy
         run: |
-          python -m unittest scripts/test_check_workflow_action_pins.py
+          python -m unittest \
+            scripts/test_check_dependabot_actions.py \
+            scripts/test_check_workflow_action_pins.py
+          python scripts/check_dependabot_actions.py
           python scripts/check_workflow_action_pins.py

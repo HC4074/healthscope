@@ -65,7 +65,9 @@ Successful `main` builds then publish
 full-commit-SHA API and frontend images to GHCR with signed provenance and SPDX
 SBOM attestations. All external GitHub Actions dependencies are pinned to
 immutable commit SHAs, and a lightweight workflow rejects mutable action tags
-before CI configuration changes can merge. A release preflight binds both
+before CI configuration changes can merge. Dependabot checks those action pins
+weekly and opens focused update pull requests; every proposed replacement still
+has to pass the immutable-reference policy. A release preflight binds both
 images to the approved source commit and signing workflow, verifies both
 attestation types, and emits the
 matching immutable digest references. The source SHA is also embedded into both
