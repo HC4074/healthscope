@@ -80,6 +80,11 @@ health-hazard classes.
 
 The FDA base URL and 10-second request timeout can be changed with
 `HEALTHSCOPE_FDA_API_BASE_URL` and `HEALTHSCOPE_FDA_REQUEST_TIMEOUT_SECONDS`.
+Transient network failures, timeouts, rate limits, and HTTP 5xx responses are
+retried up to three attempts with exponential delay; configure the bounded policy
+with `HEALTHSCOPE_FDA_REQUEST_MAX_ATTEMPTS` and
+`HEALTHSCOPE_FDA_REQUEST_RETRY_DELAY_SECONDS`. Invalid requests and malformed FDA
+responses fail immediately.
 Anonymous requests use openFDA's public quota. Set the optional secret
 `HEALTHSCOPE_FDA_API_KEY` to use the larger authenticated daily quota; the key is
 passed only to FDA and is never returned by HealthScope.

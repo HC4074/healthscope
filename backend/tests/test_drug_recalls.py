@@ -129,6 +129,15 @@ def test_openapi_schema_exposes_drug_recall_endpoint() -> None:
 
 
 def test_fda_dependency_builds_client_from_settings() -> None:
-    client = get_fda_client(Settings(environment="test", fda_api_key="secret"))
+    client = get_fda_client(
+        Settings(
+            environment="test",
+            fda_api_key="secret",
+            fda_request_max_attempts=4,
+            fda_request_retry_delay_seconds=0.25,
+        )
+    )
 
     assert isinstance(client, FDAClient)
+    assert client._max_attempts == 4
+    assert client._retry_delay_seconds == 0.25

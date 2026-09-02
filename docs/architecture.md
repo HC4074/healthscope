@@ -17,7 +17,8 @@ application behavior, and storage can evolve independently.
    source metadata. A separate FDA client retrieves newest-first drug recall
    enforcement reports from openFDA, validates assigned and pending
    classifications, dates, ordering, pagination, and source metadata, normalizes
-   official blank/`N/A` optional fields to null, and preserves FDA's medical-use
+   official blank/`N/A` optional fields to null, retries bounded transient
+   network/rate-limit/server failures, and preserves FDA's medical-use
    disclaimer. No bundled or fabricated healthcare dataset is used.
 3. Repository functions persist validated records through SQLAlchemy. Daily CMS
    hospital observations use PostgreSQL-native upserts and a composite key of
