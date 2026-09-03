@@ -1,5 +1,6 @@
 """Typed client for FDA drug recall enforcement reports."""
 
+import asyncio
 from datetime import UTC, date, datetime
 from itertools import pairwise
 from typing import Annotated
@@ -20,6 +21,7 @@ from healthscope.schemas.drug_recalls import (
 
 FDA_SOURCE_NAME = "U.S. Food and Drug Administration"
 FDA_DRUG_RECALL_DATASET_NAME = "Drug Recall Enforcement Reports"
+FDA_TRANSIENT_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
 class FDAClientError(Exception):
@@ -143,11 +145,15 @@ class FDAClient:
         *,
         base_url: str,
         timeout_seconds: float,
+        max_attempts: int = 3,
+        retry_delay_seconds: float = 0.5,
         api_key: str | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
+        self._max_attempts = max_attempts
+        self._retry_delay_seconds = retry_delay_seconds
         self._api_key = api_key
         self._transport = transport
 
@@ -159,6 +165,39 @@ class FDAClient:
             transport=self._transport,
             headers={"User-Agent": "HealthScope/0.1"},
         )
+
+    async def _get_with_retries(
+        self,
+        client: httpx.AsyncClient,
+        *,
+        url: str,
+        params: dict[str, str | int],
+    ) -> httpx.Response:
+        """Retry only failures that can reasonably recover without caller action."""
+
+        retry_delay_seconds = self._retry_delay_seconds
+        for attempt in range(1, self._max_attempts + 1):
+            try:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response
+            except httpx.TimeoutException as exc:
+                if attempt == self._max_attempts:
+                    raise FDAUpstreamTimeoutError from exc
+            except httpx.HTTPStatusError as exc:
+                if (
+                    attempt == self._max_attempts
+                    or exc.response.status_code not in FDA_TRANSIENT_STATUS_CODES
+                ):
+                    raise FDAUpstreamError from exc
+            except httpx.RequestError as exc:
+                if attempt == self._max_attempts:
+                    raise FDAUpstreamError from exc
+
+            await asyncio.sleep(retry_delay_seconds)
+            retry_delay_seconds *= 2
+
+        raise AssertionError("FDA retry loop exhausted without returning or raising")
 
     async def fetch_drug_recalls(
         self,
@@ -180,14 +219,8 @@ class FDAClient:
         if self._api_key is not None:
             params["api_key"] = self._api_key
 
-        try:
-            async with self._build_http_client() as client:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-        except httpx.TimeoutException as exc:
-            raise FDAUpstreamTimeoutError from exc
-        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
-            raise FDAUpstreamError from exc
+        async with self._build_http_client() as client:
+            response = await self._get_with_retries(client, url=url, params=params)
 
         try:
             payload = _FDAEnvelope.model_validate(response.json())
@@ -248,6 +281,8 @@ def get_fda_client(settings: SettingsDependency) -> FDAClient:
     return FDAClient(
         base_url=settings.fda_api_base_url,
         timeout_seconds=settings.fda_request_timeout_seconds,
+        max_attempts=settings.fda_request_max_attempts,
+        retry_delay_seconds=settings.fda_request_retry_delay_seconds,
         api_key=api_key,
     )
 

@@ -50,6 +50,8 @@ after those decisions are authorized; it does not choose a provider or plan.
 | `HEALTHSCOPE_DEBUG` | Required, `false` | Prevents debug responses in production. |
 | `HEALTHSCOPE_RELEASE_SHA` | Image-managed | Full source revision embedded during the reviewed image build; never set it in the deployment env file. |
 | `HEALTHSCOPE_FDA_API_KEY` | Optional secret | Raises the openFDA request quota. |
+| `HEALTHSCOPE_FDA_REQUEST_MAX_ATTEMPTS` | Versioned default | Bounded attempts for transient openFDA failures. |
+| `HEALTHSCOPE_FDA_REQUEST_RETRY_DELAY_SECONDS` | Versioned default | Initial exponential retry delay for openFDA. |
 | CMS, CDC, and FDA URL/dataset settings | Versioned defaults | Official public source identities and request policy. Change only through a reviewed release. |
 | `HEALTHSCOPE_HTTP_PORT` | Optional host setting | Published HTTP port; defaults to `80`. |
 | `HEALTHSCOPE_API_IMAGE`, `HEALTHSCOPE_FRONTEND_IMAGE` | Required for prebuilt deployment | Attestation-verified immutable GHCR digests from the same release. |

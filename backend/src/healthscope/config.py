@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     cdc_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
     fda_api_base_url: str = Field(default="https://api.fda.gov", pattern=r"^https://")
     fda_request_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
+    fda_request_max_attempts: int = Field(default=3, ge=1, le=10)
+    fda_request_retry_delay_seconds: float = Field(default=0.5, ge=0, le=60)
     fda_api_key: SecretStr | None = None
 
     @model_validator(mode="after")

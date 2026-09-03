@@ -24,7 +24,8 @@ healthcare KPIs, and exposing insights through APIs and interactive dashboards.
 Phase 1 is in progress. The repository includes a typed FastAPI service, a
 versioned health endpoint, a paginated live CMS Hospital General Information
 endpoint, paginated live CDC PLACES county-health and measure-catalog endpoints,
-and newest-first live FDA drug recall enforcement reports,
+and newest-first live FDA drug recall enforcement reports with bounded retries
+for transient network, rate-limit, and server failures,
 versioned PostgreSQL migrations, an idempotent daily hospital snapshot store,
 verified completion metadata with state-level coverage APIs, durable ingestion run status and
 monitor-ready health checks, an explicit full-dataset ingestion command with
