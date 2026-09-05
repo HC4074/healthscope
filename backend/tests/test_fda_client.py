@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+from unittest.mock import AsyncMock, call
 
 import httpx
 import pytest
@@ -60,13 +61,19 @@ def fda_payload(
 
 
 def build_client(
-    handler: Callable[[httpx.Request], httpx.Response], *, api_key: str | None = None
+    handler: Callable[[httpx.Request], httpx.Response],
+    *,
+    api_key: str | None = None,
+    max_attempts: int = 1,
+    retry_delay_seconds: float = 0,
 ) -> FDAClient:
     """Build a client whose HTTP layer is deterministic."""
 
     return FDAClient(
         base_url="https://fda.example/",
         timeout_seconds=1,
+        max_attempts=max_attempts,
+        retry_delay_seconds=retry_delay_seconds,
         api_key=api_key,
         transport=httpx.MockTransport(handler),
     )
@@ -137,6 +144,79 @@ def test_fetch_drug_recalls_maps_http_failure_to_domain_error() -> None:
         asyncio.run(
             build_client(handler).fetch_drug_recalls(limit=2, offset=0, classification=None)
         )
+
+
+def test_fetch_drug_recalls_retries_transient_failures_with_exponential_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = 0
+    sleep = AsyncMock()
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ReadTimeout("FDA request timed out", request=request)
+        if attempts == 2:
+            return httpx.Response(429, request=request)
+        if attempts == 3:
+            return httpx.Response(503, request=request)
+        return httpx.Response(200, json=fda_payload())
+
+    page = asyncio.run(
+        build_client(
+            handler,
+            max_attempts=4,
+            retry_delay_seconds=0.25,
+        ).fetch_drug_recalls(limit=2, offset=0, classification=None)
+    )
+
+    assert attempts == 4
+    assert page.total == 17832
+    assert sleep.await_args_list == [call(0.25), call(0.5), call(1.0)]
+
+
+def test_fetch_drug_recalls_retries_transient_network_failure() -> None:
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ConnectError("FDA connection failed", request=request)
+        return httpx.Response(200, json=fda_payload())
+
+    page = asyncio.run(
+        build_client(handler, max_attempts=2).fetch_drug_recalls(
+            limit=2,
+            offset=0,
+            classification=None,
+        )
+    )
+
+    assert attempts == 2
+    assert page.total == 17832
+
+
+def test_fetch_drug_recalls_does_not_retry_nontransient_http_failure() -> None:
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(400, request=request)
+
+    with pytest.raises(FDAUpstreamError):
+        asyncio.run(
+            build_client(handler, max_attempts=3).fetch_drug_recalls(
+                limit=2,
+                offset=0,
+                classification=None,
+            )
+        )
+
+    assert attempts == 1
 
 
 @pytest.mark.parametrize(
