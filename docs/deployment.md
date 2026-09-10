@@ -41,8 +41,9 @@ after those decisions are authorized; it does not choose a provider or plan.
   and SPDX SBOM attestations. The same full SHA is embedded as image metadata and
   API runtime metadata; do not override `HEALTHSCOPE_RELEASE_SHA` on the host.
 - Dockerfile and Compose base images are pinned to SHA-256 digests. Workflow
-  Security rejects mutable literal references, and weekly Dependabot updates
-  keep the approved Python, Node, Nginx, and PostgreSQL pins reviewable.
+  Security rejects mutable literal references. Weekly Dependabot updates keep
+  the approved Python, Node, and Nginx Dockerfile pins reviewable; the
+  Compose-only PostgreSQL pin is updated through an explicit reviewed change.
 
 ## Secret and configuration inventory
 

@@ -68,9 +68,10 @@ SBOM attestations. All external GitHub Actions dependencies are pinned to
 immutable commit SHAs, and every literal Dockerfile and Compose base image is
 pinned to an immutable SHA-256 digest. A lightweight workflow rejects mutable
 action or container references before CI configuration changes can merge.
-Dependabot checks those approved action and container pins weekly and opens
-focused update pull requests; every proposed replacement still has to pass the
-immutable-reference policy. A release preflight binds both
+Dependabot checks those approved action and Dockerfile pins weekly and opens
+focused update pull requests; Compose-only pins remain protected by the same
+policy and are refreshed through reviewed changes. Every proposed replacement
+still has to pass the immutable-reference policy. A release preflight binds both
 images to the approved source commit and signing workflow, verifies both
 attestation types, and emits the
 matching immutable digest references. The source SHA is also embedded into both

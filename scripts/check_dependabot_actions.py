@@ -17,16 +17,6 @@ updates:
     commit-message:
       prefix: "ci(deps)"
   - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "America/New_York"
-    open-pull-requests-limit: 1
-    commit-message:
-      prefix: "ci(deps)"
-  - package-ecosystem: "docker"
     directory: "/backend"
     schedule:
       interval: "weekly"
@@ -59,7 +49,7 @@ def dependabot_configuration_failures(
 
     if config_path.read_text(encoding="utf-8") != EXPECTED_CONFIGURATION:
         return [
-            "Dependabot must update only the approved GitHub Actions and Docker "
+            "Dependabot must update only the approved GitHub Actions and Dockerfile "
             "locations on the reviewed weekly schedule."
         ]
     return []
@@ -71,7 +61,7 @@ def main() -> int:
     failures = dependabot_configuration_failures()
     if not failures:
         print(
-            "Dependabot is configured for reviewed weekly Actions and Docker updates."
+            "Dependabot is configured for reviewed weekly Actions and Dockerfile updates."
         )
         return 0
 

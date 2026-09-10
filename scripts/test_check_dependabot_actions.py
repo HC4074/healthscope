@@ -43,7 +43,7 @@ class DependabotActionsPolicyTests(unittest.TestCase):
             self.assertEqual(
                 dependabot_configuration_failures(config_path),
                 [
-                    "Dependabot must update only the approved GitHub Actions and Docker "
+                    "Dependabot must update only the approved GitHub Actions and Dockerfile "
                     "locations on the reviewed weekly schedule."
                 ],
             )
