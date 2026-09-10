@@ -149,9 +149,10 @@ SHAs, while literal Python, Node, Nginx, and PostgreSQL container references are
 pinned to SHA-256 digests. A dedicated policy check prevents mutable action or
 container references from entering the CI and release path. A weekly, tightly
 scoped Dependabot configuration keeps the action and Dockerfile pins
-maintainable through reviewable pull requests. Compose-only PostgreSQL pins are
-updated through explicit reviewed changes, and the same policy gate rejects any
-proposed mutable reference. Production Compose
+maintainable through reviewable pull requests without automatically changing
+runtime major/minor families. Compose-only PostgreSQL pins are updated through
+explicit reviewed changes, and the same policy gate rejects any proposed
+mutable reference. Production Compose
 requires both image references and contains no build contexts. The runbook
 passes the production env file at Compose interpolation time, so an omitted
 release tag fails closed and a deployment host cannot locally rebuild source

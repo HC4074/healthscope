@@ -26,6 +26,11 @@ updates:
     open-pull-requests-limit: 1
     commit-message:
       prefix: "ci(deps)"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
   - package-ecosystem: "docker"
     directory: "/frontend"
     schedule:
@@ -36,6 +41,11 @@ updates:
     open-pull-requests-limit: 2
     commit-message:
       prefix: "ci(deps)"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 """
 
 
