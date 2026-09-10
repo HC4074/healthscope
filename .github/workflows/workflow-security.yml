@@ -5,18 +5,28 @@ on:
     paths:
       - ".github/dependabot.yml"
       - ".github/workflows/**"
+      - "backend/Dockerfile"
+      - "compose*.yaml"
+      - "frontend/Dockerfile"
       - "scripts/check_dependabot_actions.py"
+      - "scripts/check_container_image_pins.py"
       - "scripts/check_workflow_action_pins.py"
       - "scripts/test_check_dependabot_actions.py"
+      - "scripts/test_check_container_image_pins.py"
       - "scripts/test_check_workflow_action_pins.py"
   push:
     branches: [main]
     paths:
       - ".github/dependabot.yml"
       - ".github/workflows/**"
+      - "backend/Dockerfile"
+      - "compose*.yaml"
+      - "frontend/Dockerfile"
       - "scripts/check_dependabot_actions.py"
+      - "scripts/check_container_image_pins.py"
       - "scripts/check_workflow_action_pins.py"
       - "scripts/test_check_dependabot_actions.py"
+      - "scripts/test_check_container_image_pins.py"
       - "scripts/test_check_workflow_action_pins.py"
 
 permissions:
@@ -34,6 +44,8 @@ jobs:
         run: |
           python -m unittest \
             scripts/test_check_dependabot_actions.py \
+            scripts/test_check_container_image_pins.py \
             scripts/test_check_workflow_action_pins.py
           python scripts/check_dependabot_actions.py
+          python scripts/check_container_image_pins.py
           python scripts/check_workflow_action_pins.py

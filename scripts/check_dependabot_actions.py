@@ -1,4 +1,4 @@
-"""Enforce the reviewed Dependabot policy for GitHub Actions updates."""
+"""Enforce the reviewed Dependabot policy for Actions and container bases."""
 
 import sys
 from pathlib import Path
@@ -16,6 +16,36 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "ci(deps)"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "ci(deps)"
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "ci(deps)"
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "ci(deps)"
 """
 
 
@@ -29,8 +59,8 @@ def dependabot_configuration_failures(
 
     if config_path.read_text(encoding="utf-8") != EXPECTED_CONFIGURATION:
         return [
-            "Dependabot must update only GitHub Actions from the repository root "
-            "on the reviewed weekly schedule."
+            "Dependabot must update only the approved GitHub Actions and Docker "
+            "locations on the reviewed weekly schedule."
         ]
     return []
 
@@ -40,10 +70,12 @@ def main() -> int:
 
     failures = dependabot_configuration_failures()
     if not failures:
-        print("Dependabot is configured for reviewed weekly GitHub Actions updates.")
+        print(
+            "Dependabot is configured for reviewed weekly Actions and Docker updates."
+        )
         return 0
 
-    print("Dependabot GitHub Actions policy failures found:", file=sys.stderr)
+    print("Dependabot update policy failures found:", file=sys.stderr)
     for failure in failures:
         print(f"- {failure}", file=sys.stderr)
     return 1

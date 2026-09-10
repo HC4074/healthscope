@@ -40,6 +40,9 @@ after those decisions are authorized; it does not choose a provider or plan.
   production release checks pass. Each digest has signed GitHub build-provenance
   and SPDX SBOM attestations. The same full SHA is embedded as image metadata and
   API runtime metadata; do not override `HEALTHSCOPE_RELEASE_SHA` on the host.
+- Dockerfile and Compose base images are pinned to SHA-256 digests. Workflow
+  Security rejects mutable literal references, and weekly Dependabot updates
+  keep the approved Python, Node, Nginx, and PostgreSQL pins reviewable.
 
 ## Secret and configuration inventory
 

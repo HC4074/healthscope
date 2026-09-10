@@ -145,10 +145,12 @@ digest back to the exact workflow and repository revision; production can pull
 reviewed artifacts without rebuilding them on the host. The build also embeds
 that revision into both images, and production API settings reject the
 development placeholder. External workflow actions are pinned to full commit
-SHAs, with a dedicated policy check preventing mutable action tags from entering
-the CI and release path. A weekly, Actions-only Dependabot configuration keeps
-those immutable pins maintainable through reviewable pull requests, while the
-same policy gate rejects any proposed mutable reference. Production Compose
+SHAs, while literal Python, Node, Nginx, and PostgreSQL container references are
+pinned to SHA-256 digests. A dedicated policy check prevents mutable action or
+container references from entering the CI and release path. A weekly, tightly
+scoped Dependabot configuration keeps those immutable pins maintainable through
+reviewable pull requests, while the same policy gate rejects any proposed
+mutable reference. Production Compose
 requires both image references and contains no build contexts. The runbook
 passes the production env file at Compose interpolation time, so an omitted
 release tag fails closed and a deployment host cannot locally rebuild source
